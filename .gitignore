@@ -1,5 +1,5 @@
 # Data files
-./pretrained/*.npz
+pretrained/*.npz
 
 
 # Windows image file caches
