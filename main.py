@@ -102,12 +102,12 @@ def get_parameters():
         default=750,
         type=int
     )
-    # parser.add_argument(
-    #     '--dim_embed',
-    #     help='Dimension for the word embedding',
-    #     default=300,
-    #     type=int
-    # )
+    parser.add_argument(
+        '--dim_embed',
+        help='Dimension for the word embedding',
+        default=300,
+        type=int
+    )
     # parser.add_argument(
     #     '--dim_decoder',
     #     help='Dimension of the vector used for word generation',
