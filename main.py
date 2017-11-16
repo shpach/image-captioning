@@ -5,132 +5,132 @@ import argparse
 
 ''' Retrieve all necessary parameters to train/test the ImageCaptioner '''
 def get_parameters():
-	parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
 
-	##########################################
-	### Location of training/testing files ###
-	##########################################
-	parser.add_argument(
-		'--train_img_dir',
-		help='Path to training images',
-		required=True
-	)
-	parser.add_argument(
-		'--train_captions',
-		help='Path to training captions file',
-		required=True
-	)
-	parser.add_argument(
-		'--test_img_dir',
-		help='Path to test images',
-		required=True
-	)
-	parser.add_argument(
-		'--test_captions',
-		help='Path to testing captions file',
-		required=True
-	)
+    ##########################################
+    ### Location of training/testing files ###
+    ##########################################
+    parser.add_argument(
+        '--train_img_dir',
+        help='Path to training images',
+        required=True
+    )
+    parser.add_argument(
+        '--train_captions',
+        help='Path to training captions file',
+        required=True
+    )
+    parser.add_argument(
+        '--test_img_dir',
+        help='Path to test images',
+        required=True
+    )
+    parser.add_argument(
+        '--test_captions',
+        help='Path to testing captions file',
+        required=True
+    )
 
-	##########################
-	### Saving checkpoints ###
-	##########################
-	parser.add_argument(
-		'--ckpt_dir',
-		help='Saves checkpoints here',
-		default='./checkpoints/'
-	)
-	parser.add_argument(
-		'--ckpt_freq',
-		help='Save model after this many iterations',
-		default=1000,
-		type=int
-	)
+    ##########################
+    ### Saving checkpoints ###
+    ##########################
+    parser.add_argument(
+        '--ckpt_dir',
+        help='Saves checkpoints here',
+        default='./checkpoints/'
+    )
+    parser.add_argument(
+        '--ckpt_freq',
+        help='Save model after this many iterations',
+        default=1000,
+        type=int
+    )
 
-	############################
-	### General model params ###
-	############################
-	parser.add_argument(
-		'--solver',
-		help='Optimizer to use: {adam, sgd}',
-		default='adam'
-	)
-	parser.add_argument(
-		'--learning_rate',
-		help='Learning rate',
-		default=1e-3,
-		type=float
-	)
-	parser.add_argument(
-		'--batch_size',
-		help='Specify how many images to use for each iteration',
-		default=20,
-		type=int
-	)
-	parser.add_argument(
-		'--num_epochs',
-		help='Specify how many epochs to run for',
-		default=20,
-		type=int
-	)
+    ############################
+    ### General model params ###
+    ############################
+    parser.add_argument(
+        '--solver',
+        help='Optimizer to use: {adam, sgd}',
+        default='adam'
+    )
+    parser.add_argument(
+        '--learning_rate',
+        help='Learning rate',
+        default=1e-3,
+        type=float
+    )
+    parser.add_argument(
+        '--batch_size',
+        help='Specify how many images to use for each iteration',
+        default=20,
+        type=int
+    )
+    parser.add_argument(
+        '--num_epochs',
+        help='Specify how many epochs to run for',
+        default=20,
+        type=int
+    )
 
-	########################
-	### CNN model params ###
-	########################
-	parser.add_argument(
-		'--cnn_model',
-		help='Type of CNN to use: {custom, vgg16}',
-		default='vgg16'
-	)
-	parser.add_argument(
-		'--cnn_model_file',
-		help='Path to pretrained model file',
-		required=True
-	)
-	parser.add_argument(
-		'--train_cnn',
-		help='Train CNN jointly with the RNN if flag is set',
-		action='store_true'
-		default=False
-	)
+    ########################
+    ### CNN model params ###
+    ########################
+    parser.add_argument(
+        '--cnn_model',
+        help='Type of CNN to use: {custom, vgg16}',
+        default='vgg16'
+    )
+    parser.add_argument(
+        '--cnn_model_file',
+        help='Path to pretrained model file',
+        required=True
+    )
+    parser.add_argument(
+        '--train_cnn',
+        help='Train CNN jointly with the RNN if flag is set',
+        action='store_true'
+        default=False
+    )
 
-	########################
-	### RNN model params ###
-	########################
-	parser.add_argument(
-		'--hidden_size',
-		help='Number of LSTM units to use',
-		default=750,
-		type=int
-	)
-	# parser.add_argument(
-	#     '--dim_embed',
-	#     help='Dimension for the word embedding',
-	#     default=300,
-	#     type=int
-	# )
-	# parser.add_argument(
-	#     '--dim_decoder',
-	#     help='Dimension of the vector used for word generation',
-	#     default=1000,
-	#     type=int
-	# )
+    ########################
+    ### RNN model params ###
+    ########################
+    parser.add_argument(
+        '--hidden_size',
+        help='Number of LSTM units to use',
+        default=750,
+        type=int
+    )
+    # parser.add_argument(
+    #     '--dim_embed',
+    #     help='Dimension for the word embedding',
+    #     default=300,
+    #     type=int
+    # )
+    # parser.add_argument(
+    #     '--dim_decoder',
+    #     help='Dimension of the vector used for word generation',
+    #     default=1000,
+    #     type=int
+    # )
 
-	args = parser.parse_args()
-	return args
+    args = parser.parse_args()
+    return args
 
 
 def main(_):
 
-	# Get dataset.
-	data = ???
+    # Get dataset.
+    data = ???
 
-	config = get_parameters()
+    config = get_parameters()
 
-	# Build model.
-	model = ImageCaptioner(config)
+    # Build model.
+    model = ImageCaptioner(config)
 
-	model.train(train_data)
-	model.test(test_data)
+    model.train(train_data)
+    model.test(test_data)
 
 if __name__ == "__main__":
-	tf.app.run()
+    tf.app.run()

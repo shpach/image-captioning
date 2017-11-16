@@ -2,35 +2,35 @@ import tensorflow as tf
 from pretrained.vgg16 import vgg16
 
 class ImageCaptioner(object):
-	def __init__(self, config):
+    def __init__(self, config):
 
-		self.config = config
+        self.config = config
 
-		# Create session
-		self.session = tf.Session()
+        # Create session
+        self.session = tf.Session()
 
-		# Create architecture
-		self.cnn_output = None
-		self.build_cnn()
-		self.build_rnn()
+        # Create architecture
+        self.cnn_output = None
+        self.build_cnn()
+        self.build_rnn()
 
-		self.session.run(tf.global_variables_initializer())
-		self.saver = tf.train.Saver(max_to_keep = 100)
+        self.session.run(tf.global_variables_initializer())
+        self.saver = tf.train.Saver(max_to_keep = 100)
 
 
-	def build_cnn(self):
-		print('Building CNN...')
+    def build_cnn(self):
+        print('Building CNN...')
 
-		if config.cnn_model == 'custom':
-			self.build_custom_cnn()
+        if config.cnn_model == 'custom':
+            self.build_custom_cnn()
 
         else:
-        	self.build_vgg16()
+            self.build_vgg16()
 
     def build_custom_cnn(self):
-    	print('Building custom model...')
+        print('Building custom model...')
 
-		W_conv1 = _weight_variable([5, 5, 1, 32])
+        W_conv1 = _weight_variable([5, 5, 1, 32])
         b_conv1 = _bias_variable([32])
         h_conv1 = tf.nn.relu(_conv2d(imgs_placeholder, W_conv1) + b_conv1)
         h_pool1 = _max_pool_2x2(h_conv1)
@@ -51,30 +51,30 @@ class ImageCaptioner(object):
         self.cnn_output = h_flat3
 
     def build_vgg16(self):
-    	print('Building VGG-16...')
+        print('Building VGG-16...')
 
-    	self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
-    	vgg16(imgs, self.config.cnn_model_file, self.session)
-    	self.cnn_output = self.fc2
-
-
-	def build_rnn(self):
-		print('Building RNN...')
-
-		######################
-		## BUILD A RNN HERE ##
-		######################
-		pass		
-
-	def train(self):
-		if self.config.train_cnn:
-			pass
-		else:
-			self.sess.run()
+        self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
+        vgg16(imgs, self.config.cnn_model_file, self.session)
+        self.cnn_output = self.fc2
 
 
-	# Layers/initializers
-	def _conv2d(x, W):
+    def build_rnn(self):
+        print('Building RNN...')
+
+        ######################
+        ## BUILD A RNN HERE ##
+        ######################
+        pass        
+
+    def train(self):
+        if self.config.train_cnn:
+            pass
+        else:
+            self.sess.run()
+
+
+    # Layers/initializers
+    def _conv2d(x, W):
         return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
     def _weight_variable(shape):
@@ -85,6 +85,6 @@ class ImageCaptioner(object):
       initial = tf.constant(0.1, shape=shape)
       return tf.Variable(initial)
 
-  	def _max_pool_2x2(x):
+    def _max_pool_2x2(x):
           return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                                 strides=[1, 2, 2, 1], padding='SAME')
