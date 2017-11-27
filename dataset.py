@@ -51,17 +51,17 @@ class DataSet():
         """ save the dataset to pickle """
         pickle.dump([self.training_data, self.validation_data, self.training_annotation,
                      self.validation_annotation, self.batch_size, self.is_training, self.image_width, self.image_height],
-                    open(self.save_file, 'wb'))
+                    open(self.save_file, 'wb'), protocol=4)
 
     def load(self):
         """ load the dataset from pickle """
         self.training_data, self.validation_data, self.training_annotation, self.validation_annotation, self.batch_size, self.is_training, self.image_width, self.image_height = pickle.load(open(self.save_file, 'rb'))
 
 def prepare_data(arg):
-    word_table_file = arg.word_table_file
+    word_table_file = arg.wordtable_save
     glove_file_path = arg.glove_file_path
     vector_dim = arg.vector_dim
-    data_file_path = arg.dataset_file
+    data_file_path = arg.data_file_path
 
     """"build the word table """
     word_table = wordtable.WordTable(vector_dim, word_table_file)
@@ -73,8 +73,8 @@ def prepare_data(arg):
         word_table.load()
 
     """"build the dataset """
-    dataset = DataSet(arg.batch_size, True, arg.image_width, arg.image_height, arg.dataset_file)
-    if not os.path.exists(arg.dataset_file):
+    dataset = DataSet(arg.batch_size, True, arg.image_width, arg.image_height, arg.dataset_save)
+    if not os.path.exists(arg.dataset_save):
         dataset.setup(arg.data_file_path, word_table)
         dataset.save()
     else:

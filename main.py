@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-# from model import ImageCaptioner
+from model import ImageCaptioner
 import argparse
 import dataset
 
@@ -11,10 +11,10 @@ def get_parameters():
     ##########################################
     ### Location of training/testing files ###
     ##########################################
-    parser.add_argument('--train_img_dir', help='Path to training images', default='./data')
-    parser.add_argument('--train_captions', help='Path to training captions file', default='./data')
-    parser.add_argument('--test_img_dir', help='Path to test images', default='./data')
-    parser.add_argument('--test_captions', help='Path to testing captions file', default='./data')
+    parser.add_argument('--train_img_dir', help='Path to training images', default='./data/Flickr/Flickr8k_image')
+    parser.add_argument('--train_captions', help='Path to training captions file', default='./data/Flickr/Flickr8k_text')
+    parser.add_argument('--test_img_dir', help='Path to test images', default='./data/Flickr/Flickr8k_image')
+    parser.add_argument('--test_captions', help='Path to testing captions file', default='./data/Flickr/Flickr8k_text')
 
     ##########################
     ### Saving checkpoints ###
@@ -52,12 +52,12 @@ def get_parameters():
     ####################################
     ### Dataset preprocessing params ###
     ####################################
-    parser.add_argument('--word_table_file', help='File to store the word table', default='./save/word_table.pickle')
-    parser.add_argument('--dataset_file', help='File to store the data set', default='./save/dataset.pickle')
+    parser.add_argument('--wordtable_save', help='File to store the word table', default='./save/word_table.pickle')
+    parser.add_argument('--dataset_save', help='File to store the data set', default='./save/dataset.pickle')
     parser.add_argument('--glove_file_path', help='Directory containing the glove file', default='./data/glove/')
     parser.add_argument('--vector_dim', help='word2vec vector dimension', default=50, type=int)
     parser.add_argument('--data_file_path', help='directory for data', default='./data/Flickr/')
-    parser.add_argument('--image_width', help='resize image width', default = 500)
+    parser.add_argument('--image_width', help='resize image width', default=500)
     parser.add_argument('--image_height', help='resize image height', default=500)
 
     args = parser.parse_args()
@@ -65,16 +65,17 @@ def get_parameters():
 
 
 def main(_):
-
-    # Get dataset.
-    # data = ???
-    train_data = 0
-    test_data = 0
-
+    #set model arguments
     config = get_parameters()
 
     #prepare data
     word_table, data = dataset.prepare_data(config)
+    print("word to vector size : ", len(word_table.word2vec))
+    print("sentence size : ", len(word_table.sentence_dictionary))
+    print("training data shape : ", data.training_data.shape)
+    print("validation data shape : ", data.validation_data.shape)
+    print("training label size : ", len(data.training_annotation))
+    print("validation label size : ", len(data.validation_annotation))
 
     # Build model.
     model = ImageCaptioner(config)

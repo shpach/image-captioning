@@ -20,7 +20,7 @@ class WordTable():
         #             word_count[w] = word_count.get(w, 0) + 1
         #             if w not in self.word2vec:
         #                 self.word2vec[w] = 0.01
-        token_file = os.path.join(dir, 'Flickr8k_text/Flickr8k.token.txt')
+        token_file = dir + 'Flickr8k_text/Flickr8k.token.txt'
         with open(token_file) as f:
             for line in f:
                 l = line.strip()
@@ -39,9 +39,10 @@ class WordTable():
                 l = line.split()
                 self.word2vec[l[0]] = [float(x) for x in l[1:]]
 
+
     def save(self):
         """ Save the word table to pickle """
-        pickle.dump([self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words], open(self.save_file, 'wb'))
+        pickle.dump([self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words], open(self.save_file, 'wb'), protocol=4)
 
     def load(self):
         """ Load the word table from pickle """
