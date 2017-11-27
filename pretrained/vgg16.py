@@ -251,8 +251,9 @@ class vgg16:
         weights = np.load(weight_file)
         keys = sorted(weights.keys())
         for i, k in enumerate(keys):
-            # print(i, k, np.shape(weights[k]))
+            print(i, k, np.shape(weights[k]))
             sess.run(self.parameters[i].assign(weights[k]))
+        print(sess.run(self.parameters))
 
 if __name__ == '__main__':
     sess = tf.Session()
