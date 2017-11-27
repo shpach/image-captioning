@@ -15,9 +15,14 @@ python main.py --train_img_dir "${TRAIN_IMG_DIR}"	\
 		--test_img_dir "${TEST_IMG_DIR}"	\
 		--test_captions "${TEST_CAPTIONS}"	\
        	--cnn_model_file "${CNN_MODEL_FILE}" \
-       # [--ckpt_dir CKPT_DIR] [--ckpt_freq CKPT_FREQ]
-       # [--solver SOLVER] [--learning_rate LEARNING_RATE]
-       # [--batch_size BATCH_SIZE] [--num_epochs NUM_EPOCHS]
-       # [--cnn_model CNN_MODEL]
-       # [--train_cnn] [--hidden_size HIDDEN_SIZE]
-       # [--dim_embed DIM_EMBED] [--dim_decoder DIM_DECODER]
+       	# --train_cnn	\
+              # --ckpt_dir "${CKPT_DIR}"
+              # --ckpt_freq "${CKPT_FREQ}"
+              # --solver "${SOLVER}"
+              # --learning_rate "${LEARNING_RATE}"
+              # --batch_size "${BATCH_SIZE}"
+              # --num_epochs "${NUM_EPOCHS}"
+              # --cnn_model "${CNN_MODEL}"
+              # --hidden_size "${HIDDEN_SIZE}"
+              # --dim_embed "${DIM_EMBED}"
+              # --dim_decoder "${DIM_DECODER}"

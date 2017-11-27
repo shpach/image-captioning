@@ -55,7 +55,7 @@ class ImageCaptioner(object):
 
     def build_vgg16(self):
         print('Building VGG-16...')
-        self.cnn = vgg16(self.imgs_placeholder, self.config.cnn_model_file, self.session)
+        self.cnn = vgg16(self.imgs_placeholder, self.config.cnn_model_file, self.session, self.config.train_cnn)
         # self.cnn_output = conv_net.fc2
 
 
@@ -75,15 +75,14 @@ class ImageCaptioner(object):
             self.session.run()
 
     def test(self, test_data):
+        # THIS IS ONLY TESTING CONVNET SO FAR!!!
         print('Testing model...')
-        if self.config.train_cnn:
-            pass
-        else:
-            feed_dict = {self.imgs_placeholder: test_data}
-            prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
-            preds = (np.argsort(prob)[::-1])[0:5]
-            for p in preds:
-                print(class_names[p], prob[p])
+        print(tf.trainable_variables())
+        feed_dict = {self.imgs_placeholder: test_data}
+        prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
+        preds = (np.argsort(prob)[::-1])[0:5]
+        for p in preds:
+            print(class_names[p], prob[p])
 
     # Layers/initializers
     def _conv2d(x, W):
