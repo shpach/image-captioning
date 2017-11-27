@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from model import ImageCaptioner
 import argparse
+import utils.preprocessing as pre
 
 ''' Retrieve all necessary parameters to train/test the ImageCaptioner '''
 def get_parameters():
@@ -89,7 +90,7 @@ def get_parameters():
     parser.add_argument(
         '--train_cnn',
         help='Train CNN jointly with the RNN if flag is set',
-        action='store_true'
+        action='store_true',
         default=False
     )
 
@@ -108,12 +109,12 @@ def get_parameters():
         default=300,
         type=int
     )
-    # parser.add_argument(
-    #     '--dim_decoder',
-    #     help='Dimension of the vector used for word generation',
-    #     default=1000,
-    #     type=int
-    # )
+    parser.add_argument(
+        '--dim_decoder',
+        help='Dimension of the vector used for word generation',
+        default=1000,
+        type=int
+    )
 
     args = parser.parse_args()
     return args
@@ -121,15 +122,17 @@ def get_parameters():
 
 def main(_):
 
-    # Get dataset.
-    data = ???
-
+    # Retrieve parameters
     config = get_parameters()
+
+    # Preprocess all images
+    test_data = pre.load_image('data/laska.png', (224,224))
+    test_data = np.array([test_data[:,:,:3]])
 
     # Build model.
     model = ImageCaptioner(config)
 
-    model.train(train_data)
+    # model.train(train_data)
     model.test(test_data)
 
 if __name__ == "__main__":
