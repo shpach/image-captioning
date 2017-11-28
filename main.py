@@ -3,6 +3,7 @@ import numpy as np
 from model import ImageCaptioner
 import argparse
 import dataset
+import utils.preprocessing as pre
 
 ''' Retrieve all necessary parameters to train/test the ImageCaptioner '''
 def get_parameters():
@@ -34,7 +35,7 @@ def get_parameters():
     ### CNN model params ###
     ########################
     parser.add_argument('--cnn_model', help='Type of CNN to use: {custom, vgg16}', default='vgg16')
-    parser.add_argument('--cnn_model_file', help='Path to pretrained model file', default='./data')
+    parser.add_argument('--cnn_model_file', help='Path to pretrained model file', default='./data', required=True)
     parser.add_argument('--train_cnn', help='Train CNN jointly with the RNN if flag is set', action='store_true', default=False)
 
     ########################
@@ -42,6 +43,7 @@ def get_parameters():
     ########################
     parser.add_argument('--hidden_size', help='Number of LSTM units to use', default=750, type=int)
     parser.add_argument('--dim_embed', help='Dimension for the word embedding', default=300, type=int)
+    parser.add_argument('--dim_decoder', help='Dimension of the vector used for word generation', default=1000, type=int)
     # parser.add_argument(
     #     '--dim_decoder',
     #     help='Dimension of the vector used for word generation',
@@ -65,22 +67,20 @@ def get_parameters():
 
 
 def main(_):
-    #set model arguments
+    # Retrieve parameters
     config = get_parameters()
 
     #prepare data
     word_table, data = dataset.prepare_data(config)
-    print("word to vector size : ", len(word_table.word2vec))
-    print("sentence size : ", len(word_table.sentence_dictionary))
-    print("training data shape : ", data.training_data.shape)
-    print("validation data shape : ", data.validation_data.shape)
-    print("training label size : ", len(data.training_annotation))
-    print("validation label size : ", len(data.validation_annotation))
+
+    # Preprocess all images
+    test_data = pre.load_image('data/laska.png', (224,224))
+    test_data = np.array([test_data[:,:,:3]])
 
     # Build model.
     model = ImageCaptioner(config)
 
-    model.train(train_data)
+    # model.train(train_data)
     model.test(test_data)
 
 if __name__ == "__main__":
