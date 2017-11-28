@@ -1,6 +1,6 @@
+from skimage import io, transform
 
-
-
-
-def resize_images(imgs, h, w):
-    pass
+def load_image(path, shape):
+    img = io.imread(path, mode='RGB')
+    img = transform.resize(img, shape)
+    return img
