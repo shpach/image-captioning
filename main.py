@@ -78,7 +78,7 @@ def main(_):
     print("validation label size : ", len(data.validation_annotation))
 
     # Build model.
-    model = ImageCaptioner(config)
+    model = ImageCaptioner(config, word_table)
 
     model.train(train_data)
     model.test(test_data)
