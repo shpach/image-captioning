@@ -75,8 +75,8 @@ def main(_):
 
     # Preprocess all images
     test_data = pre.load_image('data/laska.png', (224,224))
-    test_data = np.array([test_data[:,:,:3]])
-
+    test_data = np.array([test_data])
+    
     # Build model.
     model = ImageCaptioner(config)
 

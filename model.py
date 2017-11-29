@@ -20,6 +20,10 @@ class ImageCaptioner(object):
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
 
+        # load shared weights if necessary
+        if config.cnn_model_file:
+            self.cnn.load_weights(config.cnn_model_file, self.session)
+
 
     def build_cnn(self):
         print('Building CNN...')
@@ -55,8 +59,7 @@ class ImageCaptioner(object):
 
     def build_vgg16(self):
         print('Building VGG-16...')
-        print(self.config.cnn_model_file)
-        self.cnn = vgg16(self.imgs_placeholder, self.config.cnn_model_file, self.session, self.config.train_cnn)
+        self.cnn = vgg16(self.imgs_placeholder, sess=self.session, trainable=self.config.train_cnn)
         # self.cnn_output = conv_net.fc2
 
 
@@ -80,7 +83,6 @@ class ImageCaptioner(object):
         print('Testing model...')
         feed_dict = {self.imgs_placeholder: test_data}
         prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
-        print(self.session.run(self.cnn.parameters))
         preds = (np.argsort(prob)[::-1])[0:5]
         for p in preds:
             print(class_names[p], prob[p])

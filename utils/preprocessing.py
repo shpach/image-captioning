@@ -1,6 +1,6 @@
-from skimage import io, transform
+from scipy.misc import imread, imresize
 
 def load_image(path, shape):
-    img = io.imread(path, mode='RGB')
-    img = transform.resize(img, shape)
+    img = imread(path, mode='RGB')
+    img = imresize(img, shape)
     return img
