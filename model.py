@@ -67,17 +67,12 @@ class ImageCaptioner(object):
         num_words = self.word_table.num_words
         max_num_words = self.word_table.max_num_words
 
-
         feats = self.cnn_output
         sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         masks = tf.placeholder(tf.int32, [batch_size, max_num_words])
-
-        # NOTE: idx2word and word2idx must be implemented in word_table.py
-        idx_to_vec = [self.word_table.word2vec[self.word_table.idx2word[idx]] for idx in range(num_words)]
-        word_emb = tf.convert_to_tensor(idx_to_vec, tf.float32)
         
         lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
-            
+        
         state = tf.zeros([self.batch_size, lstm.state_size])
 
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
