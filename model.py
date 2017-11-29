@@ -4,10 +4,10 @@ import numpy as np
 from pretrained.imagenet_classes import class_names
 
 class ImageCaptioner(object):
-    def __init__(self, config):
+    def __init__(self, config, word_table):
 
         self.config = config
-
+        self.word_table = word_table
         # Create session
         self.session = tf.Session()
 
@@ -66,10 +66,48 @@ class ImageCaptioner(object):
     def build_rnn(self):
         print('Building RNN...')
 
-        ######################
-        ## BUILD A RNN HERE ##
-        ######################
-        pass        
+        batch_size = self.config.batch_size
+        hidden_size = self.config.hidden_size
+        learning_rate = self.config.learning_rate
+        num_words = self.word_table.num_words
+        max_num_words = self.word_table.max_num_words
+
+        feats = self.cnn_output
+        sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        masks = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        
+        lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
+        
+        state = tf.zeros([self.batch_size, lstm.state_size])
+
+        W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
+        b_word = tf.Variable(tf.zeros([num_words]))
+
+        total_loss = 0
+        
+        for idx in range(max_num_words):
+            if idx == 0:
+                curr_emb = feats
+            else:
+                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, sentences[:,idx-1])
+                    
+            output, state = lstm(curr_emb, state)
+
+            logit = tf.matmul(output, W_word)+b_word
+                
+            labels = tf.expand_dims(sentence[:,i], 1)
+            indices = tf.expand_dims(tf.range(0,batch_size), 1)
+            label_matrix = tf.concat(1, [indices, labels])
+            outhot_labels = tf.sparse_to_dense(label_matrix, tf.pack([batch_size, num_words]), 1)
+                
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*mask[:,i]
+            loss = tf.reduce_sum(cross_entropy)
+            total_loss = total_loss + loss
+        
+        
+        self.total_loss = total_loss
+        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(total_loss)
+
 
     def train(self, train_data):
         print('Training model...')

@@ -78,7 +78,7 @@ def main(_):
     test_data = np.array([test_data])
     
     # Build model.
-    model = ImageCaptioner(config)
+    model = ImageCaptioner(config, word_table)
 
     # model.train(train_data)
     model.test(test_data)
