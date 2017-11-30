@@ -1,5 +1,6 @@
 import tensorflow as tf
 from pretrained.vgg16 import vgg16
+import time
 
 class ImageCaptioner(object):
     def __init__(self, config, word_table):
@@ -63,13 +64,15 @@ class ImageCaptioner(object):
 
         batch_size = self.config.batch_size
         hidden_size = self.config.hidden_size
+        vector_dim = self.config.vector_dim
         learning_rate = self.config.learning_rate
         num_words = self.word_table.num_words
         max_num_words = self.word_table.max_num_words
 
-        feats = self.cnn_output
+
+        feats = tf.placeholder(tf.float32, [batch_size, vector_dim])
         sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        masks = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
         
         lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
         
@@ -99,16 +102,71 @@ class ImageCaptioner(object):
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
         
-        
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(total_loss)
 
 
-    def train(self):
-        if self.config.train_cnn:
-            pass
+    def train(self, train_data):
+        print("Training Network")
+        start_time = time.time()
+        
+        word2idx = self.word_table.word2idx
+        idx2word = self.word_table.idx2word
+        train_images = self.word_table.training_data
+        train_caps = self.word_table.training_annotation
+
+        max_word_len = self.config.max_word_len
+        batch_size = self.config.batch_size
+        num_epochs = self.config.num_epochs
+        display_loss = self.config.display_loss
+        
+        # shuffle training data
+        train_idx = arange(len(train_caps))
+        np.random.shuffle(train_idx)
+        train_images = train_images[train_idx]
+        train_caps = train_caps[train_idx]
+        
+        batch_num = 0
+        for epoch in range(num_epochs):
+            for batch_idx in range(0,len(train_caps),batch_size):
+        
+                curr_image = train_images[batch_idx:batch_idx+batch_size]
+                curr_caps = train_caps[batch_idx:batch_idx+batch_size]
+                
+                if self.config.train_cnn:
+                    pass
+                else:
+                    self.sess.run()
+
+                sentences = np.zeros((len(batch_size),max_word_len))
+                mask = np.zeros((len(batch_size),max_word_len))
+                
+                for cap_idx, cap in enumerate(curr_caps):
+                    for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
+                        curr_sentences[cap_idx][word_idx] = word2idx[word]
+                        curr_mask[cap_idx][word_idx] = 1
+                                                  
+                _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
+                    feats :, # output of CNN
+                    sentences : curr_sentences,
+                    mask : curr_mask
+                    })
+                
+                if batch_num%display_loss == 0:
+                    print("Current Training Loss = " + str(total_loss))
+                        
+                batch_num += 1
+
+        print("Finished Training")
+        print("Elapsed time: ", self.elapsed(time.time() - start_time))
+            
+    def elapsed(sec):
+        if sec<60:
+            return str(sec) + " sec"
+        elif sec<(60*60):
+            return str(sec/60) + " min"
         else:
-            self.sess.run()
+            return str(sec/(60*60)) + " hr"
 
 
     # Layers/initializers

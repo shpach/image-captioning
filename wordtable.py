@@ -14,12 +14,8 @@ class WordTable():
         self.save_file = save_file
 
     def build(self, dir):
-        # word_count = {}
-        # for sent in sentences:
-        #         for w in sent.lower().split(' '):
-        #             word_count[w] = word_count.get(w, 0) + 1
-        #             if w not in self.word2vec:
-        #                 self.word2vec[w] = 0.01
+                     if w not in self.word2vec:
+                         self.word2vec[w] = 0.01
         token_file = dir + 'Flickr8k_text/Flickr8k.token.txt'
         with open(token_file) as f:
             for line in f:
@@ -27,7 +23,20 @@ class WordTable():
                 sentence_split = l.split('\t', 1)
                 self.sentence_dictionary[sentence_split[0]] = sentence_split[1]
 
-
+        word_count = {}
+        sentence_num = 0
+        for sentence in self.sentence_dictionary:
+            for w in sentence.lower().split(' '):
+                sentence_num += 1
+                word_count[w] = word_count.get(w, 0) + 1
+        
+        vocab = [w for w in word_count if word_count[w] >= word_count_threshold]
+        self.idx2word = {}
+        self.word2idx = {}
+        
+        for idx, word in enumerate(vocab):
+            self.word2idx[word] = idx
+            self.idx2word[idx] = word
 
 
     def load_gloves(self, dir):

@@ -29,6 +29,7 @@ def get_parameters():
     parser.add_argument('--learning_rate', help='Learning rate', default=1e-3, type=float)
     parser.add_argument('--batch_size', help='Specify how many images to use for each iteration', default=20, type=int)
     parser.add_argument('--num_epochs', help='Specify how many epochs to run for', default=20, type=int)
+    parser.add_argument('--display_loss', help='Specify how often to show training loss', default=1000, type=int)
 
     ########################
     ### CNN model params ###
@@ -42,6 +43,7 @@ def get_parameters():
     ########################
     parser.add_argument('--hidden_size', help='Number of LSTM units to use', default=750, type=int)
     parser.add_argument('--dim_embed', help='Dimension for the word embedding', default=300, type=int)
+    parser.add_argument('--max_word_len', help='Maximum number of words generated', default=30, type=int)
     # parser.add_argument(
     #     '--dim_decoder',
     #     help='Dimension of the vector used for word generation',
