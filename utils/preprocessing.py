@@ -1,6 +1,6 @@
+from scipy.misc import imread, imresize
 
-
-
-
-def resize_images(imgs, h, w):
-    pass
+def load_image(path, shape):
+    img = imread(path, mode='RGB')
+    img = imresize(img, shape)
+    return img

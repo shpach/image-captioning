@@ -1,6 +1,10 @@
 import tensorflow as tf
 from pretrained.vgg16 import vgg16
+
 import time
+import numpy as np
+from pretrained.imagenet_classes import class_names
+
 
 class ImageCaptioner(object):
     def __init__(self, config, word_table):
@@ -11,6 +15,7 @@ class ImageCaptioner(object):
         self.session = tf.Session()
 
         # Create architecture
+        self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
         self.cnn_output = None
         self.build_cnn()
         self.build_rnn()
@@ -18,11 +23,15 @@ class ImageCaptioner(object):
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
 
+        # load shared weights if necessary
+        if config.cnn_model_file:
+            self.cnn.load_weights(config.cnn_model_file, self.session)
+
 
     def build_cnn(self):
         print('Building CNN...')
 
-        if config.cnn_model == 'custom':
+        if self.config.cnn_model == 'custom':
             self.build_custom_cnn()
 
         else:
@@ -53,10 +62,8 @@ class ImageCaptioner(object):
 
     def build_vgg16(self):
         print('Building VGG-16...')
-
-        self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
-        vgg16(imgs, self.config.cnn_model_file, self.session)
-        self.cnn_output = self.fc2
+        self.cnn = vgg16(self.imgs_placeholder, sess=self.session, trainable=self.config.train_cnn)
+        # self.cnn_output = conv_net.fc2
 
 
     def build_rnn(self):
@@ -140,6 +147,7 @@ class ImageCaptioner(object):
                 else:
                     self.sess.run()
 
+
                 sentences = np.zeros((len(batch_size),max_word_len))
                 mask = np.zeros((len(batch_size),max_word_len))
                 
@@ -169,6 +177,17 @@ class ImageCaptioner(object):
             return str(sec/60) + " min"
         else:
             return str(sec/(60*60)) + " hr"
+
+ 
+
+    def test(self, test_data):
+        # THIS IS ONLY TESTING CONVNET SO FAR!!!
+        print('Testing model...')
+        feed_dict = {self.imgs_placeholder: test_data}
+        prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
+        preds = (np.argsort(prob)[::-1])[0:5]
+        for p in preds:
+            print(class_names[p], prob[p])
 
 
     # Layers/initializers
