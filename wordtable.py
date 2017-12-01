@@ -14,8 +14,7 @@ class WordTable():
         self.save_file = save_file
 
     def build(self, dir):
-                     if w not in self.word2vec:
-                         self.word2vec[w] = 0.01
+
         token_file = dir + 'Flickr8k_text/Flickr8k.token.txt'
         with open(token_file) as f:
             for line in f:

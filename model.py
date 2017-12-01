@@ -103,7 +103,7 @@ class ImageCaptioner(object):
             total_loss = total_loss + loss
         
         self.total_loss = total_loss
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(total_loss)
+        self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
 
     def train(self, train_data):
@@ -120,14 +120,16 @@ class ImageCaptioner(object):
         num_epochs = self.config.num_epochs
         display_loss = self.config.display_loss
         
-        # shuffle training data
         train_idx = arange(len(train_caps))
-        np.random.shuffle(train_idx)
-        train_images = train_images[train_idx]
-        train_caps = train_caps[train_idx]
         
         batch_num = 0
         for epoch in range(num_epochs):
+            
+            # shuffle training data
+            np.random.shuffle(train_idx)
+            train_images = train_images[train_idx]
+            train_caps = train_caps[train_idx]
+            
             for batch_idx in range(0,len(train_caps),batch_size):
         
                 curr_image = train_images[batch_idx:batch_idx+batch_size]
