@@ -70,49 +70,50 @@ class ImageCaptioner(object):
     def build_rnn(self):
         print('Building RNN...')
 
+        # contexts = conv_feats
+        # feats = fc_feats
         batch_size = self.config.batch_size
         hidden_size = self.config.hidden_size
         vector_dim = self.config.vector_dim
         learning_rate = self.config.learning_rate
         num_words = self.word_table.num_words
         max_num_words = self.word_table.max_num_words
+        vector_dim = self.config.vector_dim
 
 
-        feats = tf.placeholder(tf.float32, [batch_size, vector_dim])
-        sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
+        self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
         
-        lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)
-        
+        lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = tf.zeros([batch_size, lstm.state_size])
         
-
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
         for idx in range(max_num_words):
             if idx == 0:
-                curr_emb = feats
+                curr_emb = self.rnn_input
             else:
-                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, sentences[:,idx-1])
+                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, self.sentences[:,idx-1])
                     
             output, state = lstm(curr_emb, state)
 
             logit = tf.matmul(output, W_word)+b_word
-                
+      
             output_shape = tf.constant([batch_size, num_words])
             label_matrix = tf.stack([tf.range(0,batch_size), sentence[:,i]], 1)
             outhot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1)
-                
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*mask[:,i]
+            
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*self.mask[:,i]
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
         
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
-
+        
     def train(self, data):
         print("Training Network")
         start_time = time.time()
@@ -147,20 +148,24 @@ class ImageCaptioner(object):
                 else:
                     self.sess.run()
 
-
-                sentences = np.zeros((len(batch_size),max_word_len))
-                mask = np.zeros((len(batch_size),max_word_len))
+                curr_sentences = np.zeros((len(batch_size),max_word_len))
+                curr_mask = np.zeros((len(batch_size),max_word_len))
                 
                 for cap_idx, cap in enumerate(curr_caps):
                     for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
                         curr_sentences[cap_idx][word_idx] = word2idx[word]
                         curr_mask[cap_idx][word_idx] = 1
-                                                  
-                _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
-                    #feats :, # output of CNN
-                    sentences : curr_sentences,
-                    mask : curr_mask
-                    })
+                         
+                if self.config.train_cnn:
+                    print('Not implemented yet!')
+
+                else: 
+                    conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: curr_image})
+                    _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
+                        self.rnn_input : conv_output, 
+                        self.sentences : curr_sentences,
+                        self.mask : curr_mask
+                        })
                 
                 if batch_num%display_loss == 0:
                     print("Current Training Loss = " + str(total_loss))
