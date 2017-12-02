@@ -66,19 +66,21 @@ class ImageCaptioner(object):
     def build_rnn(self):
         print('Building RNN...')
 
+        # contexts = conv_feats
+        # feats = fc_feats
         batch_size = self.config.batch_size
         hidden_size = self.config.hidden_size
         learning_rate = self.config.learning_rate
         num_words = self.word_table.num_words
         max_num_words = self.word_table.max_num_words
 
-        feats = self.cnn_output
-        sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        masks = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
+        self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
         
-        lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
+        self.lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
         
-        state = tf.zeros([self.batch_size, lstm.state_size])
+        state = tf.zeros([batch_size, lstm.state_size])
 
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
@@ -110,9 +112,66 @@ class ImageCaptioner(object):
 
 
     def train(self, train_data):
-        print('Training model...')
-        if self.config.train_cnn:
-            pass
+        print("Training Network")
+        start_time = time.time()
+        
+        word2idx = self.word_table.word2idx
+        idx2word = self.word_table.idx2word
+        train_images = self.word_table.training_data
+        train_caps = self.word_table.training_annotation
+
+        max_word_len = self.config.max_word_len
+        batch_size = self.config.batch_size
+        num_epochs = self.config.num_epochs
+        display_loss = self.config.display_loss
+        
+        train_idx = arange(len(train_caps))
+        
+        batch_num = 0
+        for epoch in range(num_epochs):
+            
+            # shuffle training data
+            np.random.shuffle(train_idx)
+            train_images = train_images[train_idx]
+            train_caps = train_caps[train_idx]
+            
+            for batch_idx in range(0,len(train_caps),batch_size):
+        
+                curr_image = train_images[batch_idx:batch_idx+batch_size]
+                curr_caps = train_caps[batch_idx:batch_idx+batch_size]
+
+                sentences = np.zeros((len(batch_size),max_word_len))
+                mask = np.zeros((len(batch_size),max_word_len))
+                
+                for cap_idx, cap in enumerate(curr_caps):
+                    for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
+                        curr_sentences[cap_idx][word_idx] = word2idx[word]
+                        curr_mask[cap_idx][word_idx] = 1
+                         
+                if self.config.train_cnn:
+                    print('Not implemented yet!')
+
+                else: 
+
+                    _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
+                        # feats :, # output of CNN
+                        sentences : curr_sentences,
+                        mask : curr_mask
+                        })
+                
+                if batch_num%display_loss == 0:
+                    print("Current Training Loss = " + str(total_loss))
+                        
+                batch_num += 1
+
+        print("Finished Training")
+        print("Elapsed time: ", self.elapsed(time.time() - start_time))
+            
+    def elapsed(sec):
+        if sec<60:
+            return str(sec) + " sec"
+        elif sec<(60*60):
+            return str(sec/60) + " min"
         else:
             self.session.run()
 
