@@ -73,12 +73,13 @@ class ImageCaptioner(object):
         learning_rate = self.config.learning_rate
         num_words = self.word_table.num_words
         max_num_words = self.word_table.max_num_words
+        vector_dim = self.config.vector_dim
 
         self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
         
-        self.lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
+        lstm = tf.nn.rnn_cell.LSTMCell(hidden_size)
         
         state = tf.zeros([batch_size, lstm.state_size])
 
@@ -89,26 +90,26 @@ class ImageCaptioner(object):
         
         for idx in range(max_num_words):
             if idx == 0:
-                curr_emb = feats
+                curr_emb = self.rnn_input
             else:
-                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, sentences[:,idx-1])
+                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, self.sentences[:,idx-1])
                     
             output, state = lstm(curr_emb, state)
 
             logit = tf.matmul(output, W_word)+b_word
                 
-            labels = tf.expand_dims(sentence[:,i], 1)
+            labels = tf.expand_dims(self.sentences[:,i], 1)
             indices = tf.expand_dims(tf.range(0,batch_size), 1)
             label_matrix = tf.concat(1, [indices, labels])
             outhot_labels = tf.sparse_to_dense(label_matrix, tf.pack([batch_size, num_words]), 1)
                 
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*mask[:,i]
+            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*self.mask[:,i]
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
         
         
         self.total_loss = total_loss
-        self.train_op = tf.train.AdamOptimizer(self.learning_rate).minimize(total_loss)
+        self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
 
     def train(self, train_data):
@@ -140,8 +141,8 @@ class ImageCaptioner(object):
                 curr_image = train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = train_caps[batch_idx:batch_idx+batch_size]
 
-                sentences = np.zeros((len(batch_size),max_word_len))
-                mask = np.zeros((len(batch_size),max_word_len))
+                curr_sentences = np.zeros((len(batch_size),max_word_len))
+                curr_mask = np.zeros((len(batch_size),max_word_len))
                 
                 for cap_idx, cap in enumerate(curr_caps):
                     for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
@@ -152,11 +153,11 @@ class ImageCaptioner(object):
                     print('Not implemented yet!')
 
                 else: 
-
+                    conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: curr_image})
                     _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
-                        # feats :, # output of CNN
-                        sentences : curr_sentences,
-                        mask : curr_mask
+                        self.rnn_input : conv_output, 
+                        self.sentences : curr_sentences,
+                        self.mask : curr_mask
                         })
                 
                 if batch_num%display_loss == 0:
