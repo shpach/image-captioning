@@ -82,15 +82,15 @@ class ImageCaptioner(object):
         sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
         
-        lstm = tf.contrib.rnn.LSTMCell(hidden_size)
+        lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)
         
-        state = tf.zeros([batch_size, hidden_size])
+        state = tf.zeros([batch_size, lstm.state_size])
+        
 
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
-        total_loss = tf.zeros(1)
-        
+        total_loss = 0.0
         for idx in range(max_num_words):
             if idx == 0:
                 curr_emb = feats
