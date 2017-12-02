@@ -88,6 +88,7 @@ class ImageCaptioner(object):
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = tf.zeros([batch_size, lstm.state_size])
         
+
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
@@ -100,13 +101,16 @@ class ImageCaptioner(object):
                     
             output, state = lstm(curr_emb, state)
 
-            logit = tf.matmul(output, W_word)+b_word
+
+
+            logits = tf.matmul(output, W_word)+b_word
       
             output_shape = tf.constant([batch_size, num_words])
             label_matrix = tf.stack([tf.range(0,batch_size), sentence[:,i]], 1)
-            outhot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1)
+            onehot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1)
             
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*self.mask[:,i]
+
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
         
