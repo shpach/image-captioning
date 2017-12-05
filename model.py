@@ -19,14 +19,15 @@ class ImageCaptioner(object):
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
         self.cnn_output = None
         self.build_cnn()
-        self.build_rnn()
+        #self.build_rnn()
 
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
-
+        
         # load shared weights if necessary
         if config.cnn_model_file:
             self.cnn.load_weights(config.cnn_model_file, self.session)
+
 
 
     def build_cnn(self):
@@ -77,7 +78,7 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
         learning_rate = self.config.learning_rate
         num_words = self.word_table.num_words
-        max_num_words = self.word_table.max_num_words
+        max_num_words = self.config.max_word_len
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
@@ -89,13 +90,13 @@ class ImageCaptioner(object):
         gen_captions = []
         
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
-        state = tf.zeros([batch_size, lstm.state_size])
-        
+        state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
 
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
+
         for idx in range(max_num_words):
             if idx == 0:
                 curr_emb = self.rnn_input
@@ -114,25 +115,23 @@ class ImageCaptioner(object):
             # Generate captions
             max_prob_word = tf.argmax(logits, 1)
             gen_captions.append(max_prob_word)
-      
-            output_shape = tf.constant([batch_size, num_words])
-            label_matrix = tf.stack([tf.range(0,batch_size), sentence[:,i]], 1)
-            onehot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1)
-            
+
+            onehot_labels = tf.cast(self.sentences[:,idx], dtype=tf.int32)
+            logits = tf.cast(logits, dtype=tf.float32)
+
             # Compute loss
-            cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*self.mask[:,i]
+            cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=onehot_labels)*self.mask[:,idx]
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
-
             # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
-
+            
         self.gen_captions = tf.stack(gen_captions, axis=1)
-
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
     def train(self, data):
+
         print("Training network...")
         start_time = time.time()
         
@@ -146,21 +145,23 @@ class ImageCaptioner(object):
         num_epochs = self.config.num_epochs
         display_loss = self.config.display_loss
         
-        train_idx = arange(len(train_caps))
+        train_idx = np.arange(len(train_caps))
+        
+        shuffled_train_images = np.zeros(len(train_images))
+        shuffled_train_caps = {}
         
         batch_num = 0
         for epoch in range(num_epochs):
-            
             # shuffle training data
             np.random.shuffle(train_idx)
-            train_images = train_images[train_idx]
-            train_caps = train_caps[train_idx]
+            for idx, old_idx in enumerate(train_idx):
+                shuffled_train_images[idx] = train_images[old_idx]
+                shuffled_train_caps[idx] = train_caps[old_idx]
             
             for batch_idx in range(0,len(train_caps),batch_size):
-        
-                curr_image = train_images[batch_idx:batch_idx+batch_size]
-                curr_caps = train_caps[batch_idx:batch_idx+batch_size]
-
+                curr_image = shuffled_train_images[batch_idx:batch_idx+batch_size]
+                curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
+                
                 curr_sentences = np.zeros((len(batch_size),max_word_len))
                 curr_mask = np.zeros((len(batch_size),max_word_len))
                 
@@ -181,7 +182,8 @@ class ImageCaptioner(object):
                         })
                 
                 if batch_num%display_loss == 0:
-                    print("Current Training Loss = " + str(total_loss))
+                    pass
+                    #print("Current Training Loss = " + str(total_loss))
                         
                 batch_num += 1
 
@@ -225,49 +227,8 @@ class ImageCaptioner(object):
                 captions.append(img_cap)
 
         print(captions)
-
-
-        ###########################################################
-
-        # Generate the captions for the images
-        for k in tqdm(list(range(test_data.count))):
-            batch = test_data.next_batch()
-            img_files = batch
-            img_file = img_files[0]
-            img_name = os.path.splitext(img_file.split(os.sep)[-1])[0]
-
-            if self.train_cnn:
-                feed_dict = self.get_feed_dict(batch, is_train=False)
-            else:
-                imgs = self.img_loader.load_imgs(img_files)
-
-                if self.init_lstm_with_fc_feats:
-                    contexts, feats = sess.run([self.conv_feats, self.fc_feats], feed_dict={self.imgs:imgs, self.is_train:False})
-                    feed_dict = self.get_feed_dict(batch, is_train=False, contexts=contexts, feats=feats)
-                else:
-                    contexts = sess.run(self.conv_feats, feed_dict={self.imgs:imgs, self.is_train:False})
-                    feed_dict = self.get_feed_dict(batch, is_train=False, contexts=contexts)
-
-            result = sess.run(self.results, feed_dict=feed_dict)
-            sentence = self.word_table.indices_to_sent(result.squeeze())
-            captions.append(sentence)
         
-            # Save the result in an image file
-            img = mpimg.imread(img_file)
-            plt.imshow(img)
-            plt.axis('off')
-            plt.title(sentence)
-            plt.savefig(os.path.join(result_dir, img_name+'_result.jpg'))
-
-        # Save the captions to a file
-        results = pd.DataFrame({'image_files':test_data.img_files, 'caption':captions})
-        results.to_csv(result_file)
-        print("Testing complete.")
-    
-    
-    
-    
-
+        
     # Layers/initializers
     def _conv2d(x, W):
         return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
