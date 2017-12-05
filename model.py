@@ -81,10 +81,13 @@ class ImageCaptioner(object):
         max_num_words = self.config.max_word_len
         vector_dim = self.config.vector_dim
 
-
+        # Inputs to RNN
         self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
+
+        # Outputs of RNN
+        gen_captions = []
         
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
@@ -98,30 +101,38 @@ class ImageCaptioner(object):
             if idx == 0:
                 curr_emb = self.rnn_input
             else:
-                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, self.word_table.idx2word[self.sentences[:,idx-1]])
+                func_idx2words = np.vectorize(self.word_table.idx2word.get)
+                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, func_idx2words(self.sentences[:,idx-1]))
                     
             output, state = lstm(curr_emb, state)
 
             logits = tf.matmul(output, W_word)+b_word
-      
-            output_shape = tf.constant([batch_size, num_words])
-            label_matrix = tf.stack([tf.range(0,batch_size), self.sentences[:,idx]], 1)
-            onehot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1.0)
-            
+
+            ####################################################
+            # XXX: Might want another FC layer afterwards here #
+            ####################################################
+
+            # Generate captions
+            max_prob_word = tf.argmax(logits, 1)
+            gen_captions.append(max_prob_word)
+
             onehot_labels = tf.cast(self.sentences[:,idx], dtype=tf.int32)
             logits = tf.cast(logits, dtype=tf.float32)
 
+            # Compute loss
             cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=onehot_labels)*self.mask[:,idx]
-
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
-
+            # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
+            
+        self.gen_captions = tf.stack(gen_captions, axis=1)
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
     def train(self, data):
-        print("Begin Training")
+
+        print("Training network...")
         start_time = time.time()
         
         word2idx = self.word_table.word2idx
@@ -148,15 +159,9 @@ class ImageCaptioner(object):
                 shuffled_train_caps[idx] = train_caps[old_idx]
             
             for batch_idx in range(0,len(train_caps),batch_size):
-        
                 curr_image = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
                 
-                if self.config.train_cnn:
-                    pass
-                else:
-                    self.sess.run()
-
                 curr_sentences = np.zeros((len(batch_size),max_word_len))
                 curr_mask = np.zeros((len(batch_size),max_word_len))
                 
@@ -196,17 +201,34 @@ class ImageCaptioner(object):
  
 
     def test(self, data):
-        print('Testing model...')
-        # THIS IS ONLY TESTING CONVNET SO FAR!!!
-        test_data = data.validation_data
-        
-        feed_dict = {self.imgs_placeholder: test_data}
-        prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
-    
-    
-    
-    
+        """ Test the model. """
+        print("Testing model...")
+        result_file = self.config.results_file
 
+        test_images = data.validation_data
+        test_caps = data.validation_annotation
+
+        max_word_len = self.config.max_word_len
+
+        captions = []
+
+
+        for img in test_images:
+            if self.config.train_cnn:
+                print('Not implemented yet!')
+
+            else:
+                conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: img})
+                img_cap = self.session.run(self.gen_captions, feed_dict={
+                        self.rnn_input : conv_output, 
+                        self.sentences : curr_sentences,
+                        self.mask : curr_mask
+                        })
+                captions.append(img_cap)
+
+        print(captions)
+        
+        
     # Layers/initializers
     def _conv2d(x, W):
         return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
