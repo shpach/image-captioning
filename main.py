@@ -23,6 +23,11 @@ def get_parameters():
     parser.add_argument('--ckpt_dir', help='Saves checkpoints here', default='./checkpoints/')
     parser.add_argument('--ckpt_freq', help='Save model after this many iterations', default=1000, type=int)
 
+    ######################
+    ### Saving results ###
+    ######################
+    parser.add_argument('--results_file', help='Saves result captions for images here', default='./results/results.txt')
+
     ############################
     ### General model params ###
     ############################

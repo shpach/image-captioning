@@ -80,10 +80,13 @@ class ImageCaptioner(object):
         max_num_words = self.word_table.max_num_words
         vector_dim = self.config.vector_dim
 
-
+        # Inputs to RNN
         self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
+
+        # Outputs of RNN
+        gen_captions = []
         
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = tf.zeros([batch_size, lstm.state_size])
@@ -97,29 +100,40 @@ class ImageCaptioner(object):
             if idx == 0:
                 curr_emb = self.rnn_input
             else:
-                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, self.sentences[:,idx-1])
+                func_idx2words = np.vectorize(self.word_table.idx2word.get)
+                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, func_idx2words(self.sentences[:,idx-1]))
                     
             output, state = lstm(curr_emb, state)
 
-
-
             logits = tf.matmul(output, W_word)+b_word
+
+            ####################################################
+            # XXX: Might want another FC layer afterwards here #
+            ####################################################
+
+            # Generate captions
+            max_prob_word = tf.argmax(logits, 1)
+            gen_captions.append(max_prob_word)
       
             output_shape = tf.constant([batch_size, num_words])
             label_matrix = tf.stack([tf.range(0,batch_size), sentence[:,i]], 1)
             onehot_labels = tf.sparse_to_dense(label_matrix, output_shape, 1)
             
+            # Compute loss
             cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, onehot_labels)*self.mask[:,i]
-
             loss = tf.reduce_sum(cross_entropy)
             total_loss = total_loss + loss
-        
+
+            # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
+
+        self.gen_captions = tf.stack(gen_captions, axis=1)
+
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
     def train(self, data):
-        print("Training Network")
+        print("Training network...")
         start_time = time.time()
         
         word2idx = self.word_table.word2idx
@@ -146,11 +160,6 @@ class ImageCaptioner(object):
         
                 curr_image = train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = train_caps[batch_idx:batch_idx+batch_size]
-                
-                if self.config.train_cnn:
-                    pass
-                else:
-                    self.sess.run()
 
                 curr_sentences = np.zeros((len(batch_size),max_word_len))
                 curr_mask = np.zeros((len(batch_size),max_word_len))
@@ -190,12 +199,70 @@ class ImageCaptioner(object):
  
 
     def test(self, data):
-        print('Testing model...')
-        # THIS IS ONLY TESTING CONVNET SO FAR!!!
-        test_data = data.validation_data
+        """ Test the model. """
+        print("Testing model...")
+        result_file = self.config.results_file
+
+        test_images = data.validation_data
+        test_caps = data.validation_annotation
+
+        max_word_len = self.config.max_word_len
+
+        captions = []
+
+
+        for img in test_images:
+            if self.config.train_cnn:
+                print('Not implemented yet!')
+
+            else:
+                conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: img})
+                img_cap = self.session.run(self.gen_captions, feed_dict={
+                        self.rnn_input : conv_output, 
+                        self.sentences : curr_sentences,
+                        self.mask : curr_mask
+                        })
+                captions.append(img_cap)
+
+        print(captions)
+
+
+        ###########################################################
+
+        # Generate the captions for the images
+        for k in tqdm(list(range(test_data.count))):
+            batch = test_data.next_batch()
+            img_files = batch
+            img_file = img_files[0]
+            img_name = os.path.splitext(img_file.split(os.sep)[-1])[0]
+
+            if self.train_cnn:
+                feed_dict = self.get_feed_dict(batch, is_train=False)
+            else:
+                imgs = self.img_loader.load_imgs(img_files)
+
+                if self.init_lstm_with_fc_feats:
+                    contexts, feats = sess.run([self.conv_feats, self.fc_feats], feed_dict={self.imgs:imgs, self.is_train:False})
+                    feed_dict = self.get_feed_dict(batch, is_train=False, contexts=contexts, feats=feats)
+                else:
+                    contexts = sess.run(self.conv_feats, feed_dict={self.imgs:imgs, self.is_train:False})
+                    feed_dict = self.get_feed_dict(batch, is_train=False, contexts=contexts)
+
+            result = sess.run(self.results, feed_dict=feed_dict)
+            sentence = self.word_table.indices_to_sent(result.squeeze())
+            captions.append(sentence)
         
-        feed_dict = {self.imgs_placeholder: test_data}
-        prob = self.session.run(self.cnn.probs, feed_dict=feed_dict)[0]
+            # Save the result in an image file
+            img = mpimg.imread(img_file)
+            plt.imshow(img)
+            plt.axis('off')
+            plt.title(sentence)
+            plt.savefig(os.path.join(result_dir, img_name+'_result.jpg'))
+
+        # Save the captions to a file
+        results = pd.DataFrame({'image_files':test_data.img_files, 'caption':captions})
+        results.to_csv(result_file)
+        print("Testing complete.")
     
     
     
