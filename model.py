@@ -13,8 +13,10 @@ class ImageCaptioner(object):
 
         self.config = config
         self.word_table = word_table
+        self.training_flag = True
         # Create session
-        self.session = tf.Session()
+        config = tf.ConfigProto(device_count = {'GPU':0})
+        self.session = tf.Session(config=config)
 
         # Create architecture
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
@@ -108,8 +110,11 @@ class ImageCaptioner(object):
             if idx == 0:
                 curr_emb = fc_conv2rnn
             else:
-                curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
-                    
+                if self.training_flag:
+                    curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
+                else:
+                    curr_emb = tf.nn.embedding_lookup(self.idx2vec, max_prob_word)
+
             output, state = lstm(curr_emb, state)
 
             logits = tf.matmul(output, W_word)+b_word
@@ -137,7 +142,7 @@ class ImageCaptioner(object):
 
         
     def train(self, data):
-
+        self.training_flag = True
         print("Training network...")
         start_time = time.time()
         
@@ -215,6 +220,7 @@ class ImageCaptioner(object):
     def test(self, data):
         """ Test the model. """
         print("Testing model...")
+        self.training_flag = False
         result_file = self.config.results_file
 
         test_images = data.training_data
