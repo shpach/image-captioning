@@ -17,9 +17,8 @@ class ImageCaptioner(object):
 
         # Create architecture
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
-        self.cnn_output = None
         self.build_cnn()
-        #self.build_rnn()
+        self.build_rnn()
 
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
@@ -65,7 +64,7 @@ class ImageCaptioner(object):
     def build_vgg16(self):
         print('Building VGG-16...')
         self.cnn = vgg16(self.imgs_placeholder, sess=self.session, trainable=self.config.train_cnn)
-        # self.cnn_output = conv_net.fc2
+        self.cnn_output = self.cnn.fc2
 
 
     def build_rnn(self):
@@ -177,9 +176,11 @@ class ImageCaptioner(object):
                     #print('Not implemented yet!')
 
                 else: 
-                    conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: curr_images})
+
+                    cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_image})
+
                     _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
-                        self.rnn_input : conv_output, 
+                        self.rnn_input : cnn_output, 
                         self.sentences : curr_sentences,
                         self.mask : curr_mask
                         })
@@ -215,19 +216,16 @@ class ImageCaptioner(object):
 
         captions = []
 
+        if self.config.train_cnn:
+            print('Not implemented yet!')
 
-        for img in test_images:
-            if self.config.train_cnn:
-                print('Not implemented yet!')
-
-            else:
-                conv_output = self.session.run(self.conv_output, feed_dict={self.imgs_placeholder: img})
-                img_cap = self.session.run(self.gen_captions, feed_dict={
-                        self.rnn_input : conv_output, 
-                        self.sentences : curr_sentences,
-                        self.mask : curr_mask
-                        })
-                captions.append(img_cap)
+        else:
+            cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: test_images})
+            captions = self.session.run(self.gen_captions, feed_dict={
+                    self.rnn_input : cnn_output, 
+                    self.sentences : curr_sentences,
+                    self.mask : curr_mask
+                    })
 
         print(captions)
         
