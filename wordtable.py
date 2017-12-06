@@ -13,8 +13,10 @@ class WordTable():
         self.dim_embed = vector_dim
         self.save_file = save_file
         self.word_count_threshold = 0
+
         self.idx2word = {}
         self.word2idx = {}
+
 
     def build(self, dir):
 
@@ -27,14 +29,20 @@ class WordTable():
 
         word_count = {}
         sentence_num = 0
-        for sentence in self.sentence_dictionary:
+        for key in self.sentence_dictionary:
+            sentence = self.sentence_dictionary[key]
             for w in sentence.lower().split(' '):
-                sentence_num += 1
                 word_count[w] = word_count.get(w, 0) + 1
+            sentence_num += 1
         
-        vocab = [w for w in word_count if word_count[w] >= self.word_count_threshold]
 
-        
+        vocab = []
+        for key in self.sentence_dictionary:
+            sentence = self.sentence_dictionary[key]
+            for w in sentence.lower().split(' '):
+                if word_count[w] >= self.word_count_threshold and not(w in vocab):
+                    vocab.append(w)
+
         for idx, word in enumerate(vocab):
             self.word2idx[word] = idx
             self.idx2word[idx] = word

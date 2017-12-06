@@ -146,34 +146,39 @@ class ImageCaptioner(object):
         
         train_idx = np.arange(len(train_caps))
         
-        shuffled_train_images = np.zeros(len(train_images))
-        shuffled_train_caps = {}
-        
+        print("Start training")
         batch_num = 0
         for epoch in range(num_epochs):
             # shuffle training data
+            shuffled_train_images = []
+            shuffled_train_caps = []
             np.random.shuffle(train_idx)
-            for idx, old_idx in enumerate(train_idx):
-                shuffled_train_images[idx] = train_images[old_idx]
-                shuffled_train_caps[idx] = train_caps[old_idx]
+            for old_idx in train_idx:
+                shuffled_train_images.append(train_images[old_idx])
+                shuffled_train_caps.append(train_caps[old_idx])
             
             for batch_idx in range(0,len(train_caps),batch_size):
-                curr_image = shuffled_train_images[batch_idx:batch_idx+batch_size]
+                curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
                 
-                curr_sentences = np.zeros((len(batch_size),max_word_len))
-                curr_mask = np.zeros((len(batch_size),max_word_len))
-                
+                curr_sentences = np.zeros((batch_size,max_word_len))
+                curr_mask = np.zeros((batch_size,max_word_len))
                 for cap_idx, cap in enumerate(curr_caps):
                     for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
-                        curr_sentences[cap_idx][word_idx] = word2idx[word]
+                        if word in word2idx:
+                            curr_sentences[cap_idx][word_idx] = word2idx[word]
+                        else:
+                            curr_sentences[cap_idx][word_idx] = 0
                         curr_mask[cap_idx][word_idx] = 1
-                         
+            
                 if self.config.train_cnn:
-                    print('Not implemented yet!')
+                    pass
+                    #print('Not implemented yet!')
 
                 else: 
+
                     cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_image})
+
                     _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
                         self.rnn_input : cnn_output, 
                         self.sentences : curr_sentences,
@@ -189,7 +194,7 @@ class ImageCaptioner(object):
         print("Finished Training")
         print("Elapsed time: ", self.elapsed(time.time() - start_time))
             
-    def elapsed(sec):
+    def elapsed(self,sec):
         if sec<60:
             return str(sec) + " sec"
         elif sec<(60*60):
