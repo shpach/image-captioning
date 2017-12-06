@@ -16,9 +16,6 @@ class ImageCaptioner(object):
         self.training_flag = True
         # Create session
         self.session = tf.Session()
-        
-        # FOR TESTING
-        self.config.num_epochs = 2
 
         # Create architecture
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
@@ -240,7 +237,7 @@ class ImageCaptioner(object):
         captions = []
         
         # create empty matrices fed for testing
-        empty_sentences = np.ones((len(test_images), max_num_words))
+        empty_sentences = np.zeros((len(test_images), max_num_words))
         empty_mask = np.ones((len(test_images), max_num_words))
         
         
@@ -257,13 +254,15 @@ class ImageCaptioner(object):
                                         self.sentences : empty_sentences,
                                         self.mask : empty_mask,
                                         })
+        
         captions = []
         for x in range(len(captions_idx)):
             captions.append([])
             for y in range(len(captions_idx[0])):
                 captions[x].append(self.word_table.idx2word[captions_idx[x][y]])
         
-        print(captions)
+        for idx in range(len(captions)):
+            print(captions[idx])
 
 # Layers/initializers
 def _conv2d(x, W):
