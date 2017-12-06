@@ -137,7 +137,9 @@ class ImageCaptioner(object):
             # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
-        self.total_loss = total_loss
+
+        print('After stacking')
+        self.total_loss = total_loss / tf.reduce_sum(mask)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
