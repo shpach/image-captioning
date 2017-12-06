@@ -49,15 +49,7 @@ def get_parameters():
     ########################
     parser.add_argument('--hidden_size', help='Number of LSTM units to use', default=750, type=int)
     parser.add_argument('--dim_embed', help='Dimension for the word embedding', default=300, type=int)
-
     parser.add_argument('--max_word_len', help='Maximum number of words generated', default=30, type=int)
-    # parser.add_argument(
-    #     '--dim_decoder',
-    #     help='Dimension of the vector used for word generation',
-    #     default=1000,
-    #     type=int
-    # )
-
     parser.add_argument('--dim_decoder', help='Dimension of the vector used for word generation', default=1000, type=int)
 
 
@@ -91,7 +83,14 @@ def main(_):
     model = ImageCaptioner(config, word_table)
 
     # model.train(train_data)
-    model.test(test_data)
+
+    class FakeObject():
+        pass
+
+    fake_data = FakeObject()
+    fake_data.validation_data = np.random.rand(10, 224, 224, 3)
+    fake_data.validation_annotation = ['test', '1']
+    model.test(fake_data)
 
 if __name__ == "__main__":
     tf.app.run()
