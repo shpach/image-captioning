@@ -5,7 +5,8 @@ import numpy as np
 class WordTable():
     def __init__(self, vector_dim, save_file):
         self.word2vec = {}
-        self.sentence_dictionary = {}
+        self.img2sentence = {}
+        self.sentence2img = {}
         self.num_words = 0
         self.word_freq = []
         self.max_num_words = 0
@@ -23,19 +24,20 @@ class WordTable():
             for line in f:
                 l = line.strip()
                 sentence_split = l.split('\t', 1)
-                self.sentence_dictionary[sentence_split[0]] = sentence_split[1]
+                self.img2sentence[sentence_split[0]] = sentence_split[1]
+                self.sentence2img[sentence_split[1]] = sentence_split[0][:-2]
 
         word_count = {}
         sentence_num = 0
-        for key in self.sentence_dictionary:
-            sentence = self.sentence_dictionary[key]
+        for key in self.img2sentence:
+            sentence = self.img2sentence[key]
             for w in sentence.lower().split(' '):
                 word_count[w] = word_count.get(w, 0) + 1
             sentence_num += 1
 
         vocab = []
-        for key in self.sentence_dictionary:
-            sentence = self.sentence_dictionary[key]
+        for key in self.img2sentence:
+            sentence = self.img2sentence[key]
             for w in sentence.lower().split(' '):
                 if word_count[w] >= self.word_count_threshold and not(w in vocab):
                     vocab.append(w)
@@ -57,9 +59,9 @@ class WordTable():
 
     def save(self):
         """ Save the word table to pickle """
-        pickle.dump([self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words, self.word2idx, self.idx2word], open(self.save_file, 'wb'), protocol=4)
+        pickle.dump([self.word2vec, self.img2sentence, self.word_freq, self.num_words, self.word2idx, self.idx2word], open(self.save_file, 'wb'), protocol=4)
 
     def load(self):
         """ Load the word table from pickle """
-        self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words, self.word2idx, self.idx2word = pickle.load(open(self.save_file, 'rb'))
+        self.word2vec, self.img2sentence, self.word_freq, self.num_words, self.word2idx, self.idx2word = pickle.load(open(self.save_file, 'rb'))
 
