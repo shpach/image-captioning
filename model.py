@@ -149,7 +149,7 @@ class ImageCaptioner(object):
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
         print('After stacking')
-        self.total_loss = total_loss
+        self.total_loss = total_loss / tf.reduce_sum(mask)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
@@ -201,7 +201,7 @@ class ImageCaptioner(object):
 
                 else: 
 
-                    cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_image})
+                    cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_images})
 
                     _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
                         self.rnn_input : cnn_output, 
