@@ -72,25 +72,26 @@ def main(_):
     # Retrieve parameters
     config = get_parameters()
 
-    #prepare data
+    # Prepare data
     word_table, data = dataset.prepare_data(config)
 
+    print(data.training_data.shape)
     # Preprocess all images
-    test_data = pre.load_image('data/laska.png', (224,224))
-    test_data = np.array([test_data])
+    pre.resize_images(data, (224,224))
+    print(data.training_data.shape)
+
+    
+    # test_data = pre.load_image('data/laska.png', (224,224))
+    # test_data = np.array([test_data])
     
     # Build model.
     model = ImageCaptioner(config, word_table)
 
-    model.train(train_data)
+    # Train model
+    # model.train(data)
 
-    class FakeObject():
-        pass
-
-    fake_data = FakeObject()
-    fake_data.validation_data = np.random.rand(10, 224, 224, 3)
-    fake_data.validation_annotation = ['test', '1']
-    model.test(fake_data)
+    # Test model
+    model.test(data)
 
 if __name__ == "__main__":
     tf.app.run()
