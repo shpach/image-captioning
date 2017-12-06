@@ -18,32 +18,38 @@ class DataSet():
 
     def setup(self, dir, word_table):
         """" build the training dataset """
+        count = 0
         training_file = os.path.join(dir, 'Flickr8k_text/Flickr_8k.trainImages.txt')
         with open(training_file, encoding="utf8") as f:
             image_list = []
             for line in f:
+                count += 1
                 file_name = line.strip()
                 img = cv2.imread(dir + 'Flickr8k_image/' + file_name)
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
                 img = resize_image(img, self.image_width, self.image_height)
                 for image_id in range(5):
                     image_list.append(img)
-                    self.training_annotation.append(word_table.sentence_dictionary[file_name + '#' + str(image_id)])
+                    self.training_annotation.append(word_table.img2sentence[file_name + '#' + str(image_id)])
+                if count > 100:
+                    break
             self.training_data = np.asarray(image_list)
         print("training data shape is : ", self.training_data.shape)
 
+        count = 0
         """" build the validation dataset """
         validate_file = os.path.join(dir, 'Flickr8k_text/Flickr_8k.devImages.txt')
         with open(validate_file, encoding="utf8") as f:
             image_list = []
             for line in f:
+                count += 1
                 file_name = line.strip()
                 img = cv2.imread(dir + 'Flickr8k_image/' + file_name)
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
                 img = resize_image(img, self.image_width, self.image_height)
                 for image_id in range(5):
                     image_list.append(img)
-                    self.validation_annotation.append(word_table.sentence_dictionary[file_name + '#' + str(image_id)])
+                    self.validation_annotation.append(word_table.img2sentence[file_name + '#' + str(image_id)])
+                if count >= 100:
+                    break
             self.validation_data = np.asarray(image_list)
         print("validation data shape is : ", self.validation_data.shape)
 

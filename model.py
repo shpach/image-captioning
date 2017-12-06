@@ -7,13 +7,16 @@ from pretrained.imagenet_classes import class_names
 
 
 
+
 class ImageCaptioner(object):
     def __init__(self, config, word_table):
 
         self.config = config
         self.word_table = word_table
+        self.training_flag = True
         # Create session
-        self.session = tf.Session()
+        config = tf.ConfigProto(device_count = {'GPU':0})
+        self.session = tf.Session(config=config)
 
         # Create architecture
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
@@ -65,13 +68,12 @@ class ImageCaptioner(object):
         print('Building VGG-16...')
         self.cnn = vgg16(self.imgs_placeholder, sess=self.session, trainable=self.config.train_cnn)
         self.cnn_output = self.cnn.fc2
+        self.img_dim = 4096
 
 
     def build_rnn(self):
         print('Building RNN...')
 
-        # contexts = conv_feats
-        # feats = fc_feats
         batch_size = self.config.batch_size
         hidden_size = self.config.hidden_size
         vector_dim = self.config.vector_dim
@@ -81,45 +83,38 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
-        self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
+        self.rnn_input = tf.placeholder(tf.float32, [batch_size, self.img_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
         
+        # Squeeze conv output dimensions to RNN input dimensions
+        W_conv2rnn = _weight_variable([self.img_dim, vector_dim])
+        b_conv2rnn = _bias_variable([vector_dim]) 
+        fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
+
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
-
-        func_idx2words = np.vectorize(self.word_table.idx2word.get)
-        func_word2vec = np.vectorize(self.word_table.word2vec.get)
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
 
-        print(hidden_size, num_words)
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
 
         for idx in range(max_num_words):
-            print(idx)
             if idx == 0:
-                curr_emb = self.rnn_input
+                curr_emb = fc_conv2rnn
             else:
-                curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
-                # print(self.sentences[:,idx-1])
-                
-                # curr_emb = self.word_table.word2vec[func_idx2words(self.sentences[:,idx-1])]
-                # t1 = func_idx2words(self.sentences[:, idx-1])
-                # print(t1.shape)
-                # print(func_word2vec(t1).shape)
+                if self.training_flag:
+                    curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
+                else:
+                    curr_emb = tf.nn.embedding_lookup(self.idx2vec, max_prob_word)
 
-                # curr_emb = func_word2vec(func_idx2words(self.sentences[:, idx-1]))
-                # print(curr_emb.shape)
-                # # print('After lookup')
-                    
             output, state = lstm(curr_emb, state)
 
             logits = tf.matmul(output, W_word)+b_word
@@ -136,25 +131,20 @@ class ImageCaptioner(object):
             logits = tf.cast(logits, dtype=tf.float32)
 
             # Compute loss
-            print(logits.shape)
-            print(onehot_labels.shape)
-            print('Before entropy')
             cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=onehot_labels)*self.mask[:,idx]
-            print('After entropy')
             loss = tf.reduce_sum(cross_entropy)
-            print('After sum')
             total_loss = total_loss + loss
-            print('After loss')
             # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
+
         print('After stacking')
         self.total_loss = total_loss / tf.reduce_sum(mask)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
     def train(self, data):
-
+        self.training_flag = True
         print("Training network...")
         start_time = time.time()
         
@@ -173,6 +163,7 @@ class ImageCaptioner(object):
         print("Start training")
         batch_num = 0
         for epoch in range(num_epochs):
+            print('Epoch')
             # shuffle training data
             shuffled_train_images = []
             shuffled_train_caps = []
@@ -231,41 +222,41 @@ class ImageCaptioner(object):
     def test(self, data):
         """ Test the model. """
         print("Testing model...")
+        self.training_flag = False
         result_file = self.config.results_file
 
-        test_images = data.validation_data
-        test_caps = data.validation_annotation
+        test_images = data.training_data
+        test_caps = data.training_annotation
 
         max_word_len = self.config.max_word_len
 
         captions = []
 
+        print('Testing!!')
         if self.config.train_cnn:
             print('Not implemented yet!')
 
         else:
             cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: test_images})
-            captions = self.session.run(self.gen_captions, feed_dict={
-                    self.rnn_input : cnn_output, 
-                    self.sentences : curr_sentences,
-                    self.mask : curr_mask
-                    })
+            print(cnn_output.shape)
+            print('Convolutional features computed.')
+            captions = self.session.run(self.gen_captions, feed_dict={self.rnn_input : cnn_output})
 
-        # print(captions)
+        print(captions)
         
         
-    # Layers/initializers
-    def _conv2d(x, W):
-        return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+# Layers/initializers
+def _conv2d(x, W):
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
-    def _weight_variable(shape):
-          initial = tf.truncated_normal(shape, stddev=0.1)
-          return tf.Variable(initial)
-
-    def _bias_variable(shape):
-      initial = tf.constant(0.1, shape=shape)
+def _weight_variable(shape):
+      initial = tf.truncated_normal(shape, stddev=0.1)
       return tf.Variable(initial)
 
-    def _max_pool_2x2(x):
-          return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                                strides=[1, 2, 2, 1], padding='SAME')
+def _bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+
+def _max_pool_2x2(x):
+      return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
+                            strides=[1, 2, 2, 1], padding='SAME')
