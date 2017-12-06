@@ -94,7 +94,7 @@ class ImageCaptioner(object):
         func_idx2words = np.vectorize(self.word_table.idx2word.get)
         func_word2vec = np.vectorize(self.word_table.word2vec.get)
 
-        idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words)])
+        idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
 
         print(hidden_size, num_words)
@@ -108,7 +108,7 @@ class ImageCaptioner(object):
             if idx == 0:
                 curr_emb = self.rnn_input
             else:
-                curr_emb = tf.nn.embedding_lookup(self.idx2vec, sentences[:, idx-1])
+                curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
                 # print(self.sentences[:,idx-1])
                 
                 # curr_emb = self.word_table.word2vec[func_idx2words(self.sentences[:,idx-1])]
