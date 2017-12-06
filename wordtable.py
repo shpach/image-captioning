@@ -13,10 +13,8 @@ class WordTable():
         self.dim_embed = vector_dim
         self.save_file = save_file
         self.word_count_threshold = 0
-
         self.idx2word = {}
         self.word2idx = {}
-
 
     def build(self, dir):
 
@@ -34,7 +32,6 @@ class WordTable():
             for w in sentence.lower().split(' '):
                 word_count[w] = word_count.get(w, 0) + 1
             sentence_num += 1
-        
 
         vocab = []
         for key in self.sentence_dictionary:
