@@ -83,7 +83,7 @@ class ImageCaptioner(object):
         # Inputs to RNN
         self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        self.mask = tf.placeholder(tf.int32, [batch_size, max_num_words])
+        self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
@@ -91,17 +91,34 @@ class ImageCaptioner(object):
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
 
+        func_idx2words = np.vectorize(self.word_table.idx2word.get)
+        func_word2vec = np.vectorize(self.word_table.word2vec.get)
+
+        idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words)])
+        self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
+
+        print(hidden_size, num_words)
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
 
         for idx in range(max_num_words):
+            print(idx)
             if idx == 0:
                 curr_emb = self.rnn_input
             else:
-                func_idx2words = np.vectorize(self.word_table.idx2word.get)
-                curr_emb = tf.nn.embedding_lookup(self.word_table.word2vec, func_idx2words(self.sentences[:,idx-1]))
+                curr_emb = tf.nn.embedding_lookup(self.idx2vec, sentences[:, idx-1])
+                # print(self.sentences[:,idx-1])
+                
+                # curr_emb = self.word_table.word2vec[func_idx2words(self.sentences[:,idx-1])]
+                # t1 = func_idx2words(self.sentences[:, idx-1])
+                # print(t1.shape)
+                # print(func_word2vec(t1).shape)
+
+                # curr_emb = func_word2vec(func_idx2words(self.sentences[:, idx-1]))
+                # print(curr_emb.shape)
+                # # print('After lookup')
                     
             output, state = lstm(curr_emb, state)
 
@@ -119,12 +136,19 @@ class ImageCaptioner(object):
             logits = tf.cast(logits, dtype=tf.float32)
 
             # Compute loss
+            print(logits.shape)
+            print(onehot_labels.shape)
+            print('Before entropy')
             cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=onehot_labels)*self.mask[:,idx]
+            print('After entropy')
             loss = tf.reduce_sum(cross_entropy)
+            print('After sum')
             total_loss = total_loss + loss
+            print('After loss')
             # NOTE: Might need to use "tf.get_variable_scope().reuse_variables()"
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
+        print('After stacking')
         self.total_loss = total_loss
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
@@ -222,7 +246,7 @@ class ImageCaptioner(object):
                     self.mask : curr_mask
                     })
 
-        print(captions)
+        # print(captions)
         
         
     # Layers/initializers

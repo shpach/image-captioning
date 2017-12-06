@@ -82,7 +82,7 @@ def main(_):
     # Build model.
     model = ImageCaptioner(config, word_table)
 
-    # model.train(train_data)
+    model.train(train_data)
 
     class FakeObject():
         pass

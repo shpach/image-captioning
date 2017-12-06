@@ -9,9 +9,12 @@ class WordTable():
         self.num_words = 0
         self.word_freq = []
         self.max_num_words = 0
-        self.max_sentence_len = 0
+        self.max_sentence_len = 50
         self.dim_embed = vector_dim
         self.save_file = save_file
+        self.word_count_threshold = 0
+        self.idx2word = {}
+        self.word2idx = {}
 
     def build(self, dir):
 
@@ -29,14 +32,13 @@ class WordTable():
                 sentence_num += 1
                 word_count[w] = word_count.get(w, 0) + 1
         
-        vocab = [w for w in word_count if word_count[w] >= word_count_threshold]
-        self.idx2word = {}
-        self.word2idx = {}
+        vocab = [w for w in word_count if word_count[w] >= self.word_count_threshold]
+
         
         for idx, word in enumerate(vocab):
             self.word2idx[word] = idx
             self.idx2word[idx] = word
-
+        self.num_words = len(self.word2idx)
 
     def load_gloves(self, dir):
         """ Using GloVe data for word embedding"""
@@ -50,9 +52,8 @@ class WordTable():
 
     def save(self):
         """ Save the word table to pickle """
-        pickle.dump([self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words], open(self.save_file, 'wb'), protocol=4)
+        pickle.dump([self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words, self.word2idx, self.idx2word], open(self.save_file, 'wb'), protocol=4)
 
     def load(self):
         """ Load the word table from pickle """
-        self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words = pickle.load(open(self.save_file, 'rb'))
-
+        self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words, self.word2idx, self.idx2word = pickle.load(open(self.save_file, 'rb'))
