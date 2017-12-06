@@ -76,9 +76,13 @@ def main(_):
     word_table, data = dataset.prepare_data(config)
 
     print(data.training_data.shape)
+    print(len(data.training_annotation))
     # Preprocess all images
     pre.resize_images(data, (224,224))
+    data.training_data = data.training_data[:config.batch_size,:,:,:]
+    data.training_annotation = data.training_annotation[:config.batch_size]
     print(data.training_data.shape)
+    print(len(data.training_annotation))
 
     
     # test_data = pre.load_image('data/laska.png', (224,224))
@@ -88,7 +92,7 @@ def main(_):
     model = ImageCaptioner(config, word_table)
 
     # Train model
-    # model.train(data)
+    model.train(data)
 
     # Test model
     model.test(data)

@@ -66,6 +66,7 @@ class ImageCaptioner(object):
         print('Building VGG-16...')
         self.cnn = vgg16(self.imgs_placeholder, sess=self.session, trainable=self.config.train_cnn)
         self.cnn_output = self.cnn.fc2
+        self.img_dim = 4096
 
 
     def build_rnn(self):
@@ -80,32 +81,32 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
-        self.rnn_input = tf.placeholder(tf.float32, [batch_size, vector_dim])
+        self.rnn_input = tf.placeholder(tf.float32, [batch_size, self.img_dim])
         self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
         self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
         
+        # Squeeze conv output dimensions to RNN input dimensions
+        W_conv2rnn = _weight_variable([self.img_dim, vector_dim])
+        b_conv2rnn = _bias_variable([vector_dim]) 
+        fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
+
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
         state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
-
-        func_idx2words = np.vectorize(self.word_table.idx2word.get)
-        func_word2vec = np.vectorize(self.word_table.word2vec.get)
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
 
-        print(hidden_size, num_words)
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
 
         for idx in range(max_num_words):
-            print('Iteration: ' + str(idx))
             if idx == 0:
-                curr_emb = self.rnn_input
+                curr_emb = fc_conv2rnn
             else:
                 curr_emb = tf.nn.embedding_lookup(self.idx2vec, self.sentences[:, idx-1])
                     
@@ -155,6 +156,7 @@ class ImageCaptioner(object):
         print("Start training")
         batch_num = 0
         for epoch in range(num_epochs):
+            print('Epoch')
             # shuffle training data
             shuffled_train_images = []
             shuffled_train_caps = []
@@ -222,32 +224,31 @@ class ImageCaptioner(object):
 
         captions = []
 
+        print('Testing!!')
         if self.config.train_cnn:
             print('Not implemented yet!')
 
         else:
             cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: test_images})
-            captions = self.session.run(self.gen_captions, feed_dict={
-                    self.rnn_input : cnn_output, 
-                    self.sentences : curr_sentences,
-                    self.mask : curr_mask
-                    })
+            print(cnn_output.shape)
+            print('Convolutional features computed.')
+            captions = self.session.run(self.gen_captions, feed_dict={self.rnn_input : cnn_output})
 
         print(captions)
         
         
-    # Layers/initializers
-    def _conv2d(x, W):
-        return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+# Layers/initializers
+def _conv2d(x, W):
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
-    def _weight_variable(shape):
-          initial = tf.truncated_normal(shape, stddev=0.1)
-          return tf.Variable(initial)
-
-    def _bias_variable(shape):
-      initial = tf.constant(0.1, shape=shape)
+def _weight_variable(shape):
+      initial = tf.truncated_normal(shape, stddev=0.1)
       return tf.Variable(initial)
 
-    def _max_pool_2x2(x):
-          return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                                strides=[1, 2, 2, 1], padding='SAME')
+def _bias_variable(shape):
+  initial = tf.constant(0.1, shape=shape)
+  return tf.Variable(initial)
+
+def _max_pool_2x2(x):
+      return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
+                            strides=[1, 2, 2, 1], padding='SAME')
