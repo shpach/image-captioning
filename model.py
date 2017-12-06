@@ -15,8 +15,10 @@ class ImageCaptioner(object):
         self.word_table = word_table
         self.training_flag = True
         # Create session
-        config = tf.ConfigProto(device_count = {'GPU':0})
-        self.session = tf.Session(config=config)
+        self.session = tf.Session()
+        
+        # FOR TESTING
+        self.config.num_epochs = 2
 
         # Create architecture
         self.imgs_placeholder = tf.placeholder(tf.float32, [None, 224, 224, 3])
@@ -105,6 +107,7 @@ class ImageCaptioner(object):
         b_word = tf.Variable(tf.zeros([num_words]))
 
         total_loss = 0.0
+        
 
         for idx in range(max_num_words):
             if idx == 0:
@@ -139,7 +142,7 @@ class ImageCaptioner(object):
         self.gen_captions = tf.stack(gen_captions, axis=1)
 
         print('After stacking')
-        self.total_loss = total_loss / tf.reduce_sum(mask)
+        self.total_loss = total_loss / tf.reduce_sum(self.mask)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
 
         
@@ -147,6 +150,7 @@ class ImageCaptioner(object):
         self.training_flag = True
         print("Training network...")
         start_time = time.time()
+        self.training_flag = True
         
         word2idx = self.word_table.word2idx
         idx2word = self.word_table.idx2word
@@ -183,8 +187,10 @@ class ImageCaptioner(object):
                         if word in word2idx:
                             curr_sentences[cap_idx][word_idx] = word2idx[word]
                         else:
-                            curr_sentences[cap_idx][word_idx] = 0
+                            curr_sentences[cap_idx][word_idx] = word2idx["<RARE>"]
                         curr_mask[cap_idx][word_idx] = 1
+            
+
             
                 if self.config.train_cnn:
                     pass
@@ -195,10 +201,10 @@ class ImageCaptioner(object):
                     cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_images})
 
                     _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
-                        self.rnn_input : cnn_output, 
-                        self.sentences : curr_sentences,
-                        self.mask : curr_mask
-                        })
+                                                self.rnn_input : cnn_output,
+                                                self.sentences : curr_sentences,
+                                                self.mask : curr_mask,
+                                                })
                 
                 if batch_num%display_loss == 0:
                     pass
@@ -224,6 +230,7 @@ class ImageCaptioner(object):
         print("Testing model...")
         self.training_flag = False
         result_file = self.config.results_file
+        max_num_words = self.config.max_word_len
 
         test_images = data.training_data
         test_caps = data.training_annotation
@@ -231,7 +238,12 @@ class ImageCaptioner(object):
         max_word_len = self.config.max_word_len
 
         captions = []
-
+        
+        # create empty matrices fed for testing
+        empty_sentences = np.ones((len(test_images), max_num_words))
+        empty_mask = np.ones((len(test_images), max_num_words))
+        
+        
         print('Testing!!')
         if self.config.train_cnn:
             print('Not implemented yet!')
@@ -240,11 +252,19 @@ class ImageCaptioner(object):
             cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: test_images})
             print(cnn_output.shape)
             print('Convolutional features computed.')
-            captions = self.session.run(self.gen_captions, feed_dict={self.rnn_input : cnn_output})
-
+            captions_idx = self.session.run(self.gen_captions, feed_dict={
+                                        self.rnn_input : cnn_output,
+                                        self.sentences : empty_sentences,
+                                        self.mask : empty_mask,
+                                        })
+        captions = []
+        for x in range(len(captions_idx)):
+            captions.append([])
+            for y in range(len(captions_idx[0])):
+                captions[x].append(self.word_table.idx2word[captions_idx[x][y]])
+        
         print(captions)
-        
-        
+
 # Layers/initializers
 def _conv2d(x, W):
     return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')

@@ -41,10 +41,15 @@ class WordTable():
             for w in sentence.lower().split(' '):
                 if word_count[w] >= self.word_count_threshold and not(w in vocab):
                     vocab.append(w)
-
+        
+        self.word2idx["<EMPTY>"] = 0
+        self.idx2word[0] = "<EMTPY>"
+        self.word2idx["<RARE>"] = 1
+        self.idx2word[1] = "<RARE>"
+        
         for idx, word in enumerate(vocab):
-            self.word2idx[word] = idx
-            self.idx2word[idx] = word
+            self.word2idx[word] = idx+2
+            self.idx2word[idx+2] = word
         self.num_words = len(self.word2idx)
 
     def load_gloves(self, dir):
