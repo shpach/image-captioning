@@ -27,14 +27,19 @@ class WordTable():
 
         word_count = {}
         sentence_num = 0
-        for sentence in self.sentence_dictionary:
+        for key in self.sentence_dictionary:
+            sentence = self.sentence_dictionary[key]
             for w in sentence.lower().split(' '):
-                sentence_num += 1
                 word_count[w] = word_count.get(w, 0) + 1
-        
-        vocab = [w for w in word_count if word_count[w] >= self.word_count_threshold]
+            sentence_num += 1
 
-        
+        vocab = []
+        for key in self.sentence_dictionary:
+            sentence = self.sentence_dictionary[key]
+            for w in sentence.lower().split(' '):
+                if word_count[w] >= self.word_count_threshold and not(w in vocab):
+                    vocab.append(w)
+
         for idx, word in enumerate(vocab):
             self.word2idx[word] = idx
             self.idx2word[idx] = word
@@ -57,3 +62,4 @@ class WordTable():
     def load(self):
         """ Load the word table from pickle """
         self.word2vec, self.sentence_dictionary, self.word_freq, self.num_words, self.word2idx, self.idx2word = pickle.load(open(self.save_file, 'rb'))
+
