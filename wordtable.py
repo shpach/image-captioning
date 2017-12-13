@@ -46,10 +46,12 @@ class WordTable():
         self.idx2word[0] = "<EMTPY>"
         self.word2idx["<RARE>"] = 1
         self.idx2word[1] = "<RARE>"
+        self.word2idx["<END>"] = 2
+        self.idx2word[2] = "<END>"
         
         for idx, word in enumerate(vocab):
-            self.word2idx[word] = idx+2
-            self.idx2word[idx+2] = word
+            self.word2idx[word] = idx+3
+            self.idx2word[idx+3] = word
         self.num_words = len(self.word2idx)
 
     def load_gloves(self, dir):

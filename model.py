@@ -24,7 +24,8 @@ class ImageCaptioner(object):
 
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
-        
+		
+        self.train_writer  = tf.summary.FileWriter(config.summary_file)
         # load shared weights if necessary
         if config.cnn_model_file:
             self.cnn.load_weights(config.cnn_model_file, self.session)
@@ -140,7 +141,10 @@ class ImageCaptioner(object):
 
         print('After stacking')
         self.total_loss = total_loss / tf.reduce_sum(self.mask)
+        tf.summary.scalar('total_loss',self.total_loss)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
+			
+        self.merged = tf.summary.merge_all()
 
         
     def train(self, data):
@@ -163,8 +167,8 @@ class ImageCaptioner(object):
         
         print("Start training")
         batch_num = 0
-        for epoch in range(num_epochs):
-            print('Epoch')
+        for epoch in range(100):
+            print("Epoch number: ", epoch)
             # shuffle training data
             shuffled_train_images = []
             shuffled_train_caps = []
@@ -181,13 +185,19 @@ class ImageCaptioner(object):
                 curr_mask = np.zeros((batch_size,max_word_len))
                 for cap_idx, cap in enumerate(curr_caps):
                     for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
+                        if word_idx == max_word_len:
+                            break
                         if word in word2idx:
                             curr_sentences[cap_idx][word_idx] = word2idx[word]
                         else:
                             curr_sentences[cap_idx][word_idx] = word2idx["<RARE>"]
                         curr_mask[cap_idx][word_idx] = 1
-            
 
+                    if word_idx != max_word_len:
+                        curr_sentences[cap_idx][word_idx+1] = word2idx["<END>"]
+                        curr_mask[cap_idx][word_idx+1] = 1
+			
+                #curr_mask = np.ones((batch_size, max_word_len))
             
                 if self.config.train_cnn:
                     pass
@@ -197,15 +207,16 @@ class ImageCaptioner(object):
 
                     cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_images})
 
-                    _, total_loss = self.session.run([self.train_op, self.total_loss], feed_dict={
+                    _, summary, total_loss = self.session.run([self.train_op, self.merged, self.total_loss], feed_dict={
                                                 self.rnn_input : cnn_output,
                                                 self.sentences : curr_sentences,
                                                 self.mask : curr_mask,
                                                 })
                 
                 if batch_num%display_loss == 0:
-                    pass
-                    #print("Current Training Loss = " + str(total_loss))
+                    print("Current Training Loss = " + str(total_loss))
+                    self.train_writer.add_summary(summary, batch_num)
+				
                         
                 batch_num += 1
 
