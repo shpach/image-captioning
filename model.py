@@ -101,7 +101,7 @@ class ImageCaptioner(object):
         fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
 
         lstm_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size)
-        state = lstm_cell.zero_state(batch_size, dtype=tf.float32)	#[tf.zeros([batch_size, s]) for s in lstm.state_size]
+        state = lstm_cell.zero_state(batch_size, dtype=tf.float32)    #[tf.zeros([batch_size, s]) for s in lstm.state_size]
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
@@ -150,7 +150,7 @@ class ImageCaptioner(object):
         self.total_loss = total_loss / tf.reduce_sum(self.mask)
         tf.summary.scalar('total_loss',self.total_loss)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
-			
+		
         self.merged = tf.summary.merge_all()
 
         
@@ -185,44 +185,48 @@ class ImageCaptioner(object):
             for batch_idx in range(0,len(train_caps),batch_size):
                 curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
-                
-                curr_sentences = np.zeros((batch_size,max_word_len))
-                curr_mask = np.zeros((batch_size,max_word_len))
-                for cap_idx, cap in enumerate(curr_caps):
-                    for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
-                        if word_idx == max_word_len:
-                            break
-                        if word in word2idx:
-                            curr_sentences[cap_idx][word_idx] = word2idx[word]
-                        else:
-                            curr_sentences[cap_idx][word_idx] = word2idx["<RARE>"]
-                        curr_mask[cap_idx][word_idx] = 1
 
-                    if word_idx != max_word_len:
-                        curr_sentences[cap_idx][word_idx+1] = word2idx["<END>"]
-                        curr_mask[cap_idx][word_idx+1] = 1
-			
-                #curr_mask = np.ones((batch_size, max_word_len))
-            
-                if self.config.train_cnn:
-                    pass
-                    #print('Not implemented yet!')
+                # Loop through each batch of images 5 sentences
+                for annotate_num in range(5):
+                    curr_sentences = np.zeros((batch_size,max_word_len))
+                    curr_mask = np.zeros((batch_size,max_word_len))
+                    print(curr_caps[:][0])
+                    for cap_idx, cap in enumerate(curr_caps[:][annotate_num]):
+                        print(cap)
+                        for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
+                            if word in word2idx:
+                                curr_sentences[cap_idx][word_idx] = word2idx[word]
+                            else:
+                                curr_sentences[cap_idx][word_idx] = word2idx["<RARE>"]
+                            curr_mask[cap_idx][word_idx] = 1
+                            if word_idx == max_word_len-1:
+                                break
 
-                else: 
+                        if word_idx != max_word_len-1:
+                            curr_sentences[cap_idx][word_idx+1] = word2idx["<END>"]
+                            curr_mask[cap_idx][word_idx+1] = 1
+				
+                    #curr_mask = np.ones((batch_size, max_word_len))
+					
+                    if self.config.train_cnn:
+                        pass
+                        #print('Not implemented yet!')
 
-                    cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_images})
+                    else:
 
-                    _, summary, total_loss = self.session.run([self.train_op, self.merged, self.total_loss], feed_dict={
-                                                self.rnn_input : cnn_output,
-                                                self.sentences : curr_sentences,
-                                                self.mask : curr_mask,
-                                                })
-                
+                        cnn_output = self.session.run(self.cnn_output, feed_dict={self.imgs_placeholder: curr_images})
+
+                        _, summary, total_loss = self.session.run([self.train_op, self.merged, self.total_loss], feed_dict={
+                                                    self.rnn_input : cnn_output,
+                                                    self.sentences : curr_sentences,
+                                                    self.mask : curr_mask,
+                                                    })
+
                 if batch_num%display_loss == 0:
                     print("Current Training Loss = " + str(total_loss))
                     self.train_writer.add_summary(summary, batch_num)
+    
 	
-				
                         
                 batch_num += 1
 
@@ -278,7 +282,7 @@ class ImageCaptioner(object):
             captions.append([])
             for y in range(len(captions_idx[0])):
                 captions[x].append(self.word_table.idx2word[captions_idx[x][y]])
-					
+
         output_text = ""
         for cap_idx in range(len(captions)):
             if "<END>" in captions[cap_idx]:

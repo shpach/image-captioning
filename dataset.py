@@ -16,24 +16,25 @@ class DataSet():
         self.image_height = height
         self.save_file = save_file
 
-    def setup(self, dir, word_table):
+    def setup(self, dir, num2train, word_table):
         """" build the training dataset """
-        count = 0
         training_file = os.path.join(dir, 'Flickr8k_text/Flickr_8k.trainImages.txt')
         with open(training_file, encoding="utf8") as f:
             image_list = []
+            im_idx = 0
             for line in f:
-                count += 1
                 file_name = line.strip()
                 img = cv2.imread(dir + 'Flickr8k_image/' + file_name)
                 img = resize_image(img, self.image_width, self.image_height)
+                image_list.append(img)
+                self.training_annotation.append([])
                 for image_id in range(5):
-                    image_list.append(img)
-                    self.training_annotation.append(word_table.img2sentence[file_name + '#' + str(image_id)])
-                if count > 100:
+                    self.training_annotation[im_idx].append(word_table.img2sentence[file_name + '#' + str(image_id)])
+                if im_idx >= num2train-1:
                     break
+                im_idx += 1
             self.training_data = np.asarray(image_list)
-        print("training data shape is : ", self.training_data.shape)
+
 
         count = 0
         """" build the validation dataset """
@@ -48,9 +49,10 @@ class DataSet():
                 for image_id in range(5):
                     image_list.append(img)
                     self.validation_annotation.append(word_table.img2sentence[file_name + '#' + str(image_id)])
-                if count >= 100:
+                if count >= 20:
                     break
             self.validation_data = np.asarray(image_list)
+        print
         print("validation data shape is : ", self.validation_data.shape)
 
     def save(self):
@@ -81,7 +83,7 @@ def prepare_data(arg):
     """"build the dataset """
     dataset = DataSet(arg.batch_size, True, arg.image_width, arg.image_height, arg.dataset_save)
     if not os.path.exists(arg.dataset_save):
-        dataset.setup(arg.data_file_path, word_table)
+        dataset.setup(arg.data_file_path, arg.num2train, word_table)
         dataset.save()
     else:
         dataset.load()
