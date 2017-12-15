@@ -82,10 +82,8 @@ def main(_):
     print(len(data.training_annotation))
     # Preprocess all images
     pre.resize_images(data, (224,224))
-    data.training_data = data.training_data[:config.batch_size,:,:,:]
-    data.training_annotation = data.training_annotation[:config.batch_size]
-    print(data.training_data.shape)
-    print(len(data.training_annotation))
+    data.training_data = data.training_data[:config.batch_size*5,:,:,:]
+    data.training_annotation = data.training_annotation[:config.batch_size*5]
 
     
     # test_data = pre.load_image('data/laska.png', (224,224))

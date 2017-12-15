@@ -88,9 +88,9 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
-        self.rnn_input = tf.placeholder(tf.float32, [batch_size, self.img_dim])
-        self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
+        self.rnn_input = tf.placeholder(tf.float32, [None, self.img_dim])
+        self.sentences = tf.placeholder(tf.int32, [None, max_num_words])
+        self.mask = tf.placeholder(tf.float32, [None, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
@@ -99,7 +99,7 @@ class ImageCaptioner(object):
         W_conv2rnn = _weight_variable([self.img_dim, vector_dim])
         b_conv2rnn = _bias_variable([vector_dim]) 
         fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
-
+        
         lstm_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size)
         state = lstm_cell.zero_state(batch_size, dtype=tf.float32)	#[tf.zeros([batch_size, s]) for s in lstm.state_size]
 
@@ -259,7 +259,7 @@ class ImageCaptioner(object):
         # create empty matrices fed for testing
         empty_sentences = np.zeros((len(test_images), max_num_words))
         empty_mask = np.ones((len(test_images), max_num_words))
-		
+
         if self.config.train_cnn:
             print('Not implemented yet!')
 
