@@ -25,6 +25,11 @@ class ImageCaptioner(object):
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver(max_to_keep = 100)
 		
+        checkpoint = tf.train.get_checkpoint_state(config.ckpt_dir)
+        if checkpoint and checkpoint.model_checkpoint_path:
+            self.saver.restore(self.session, checkpoint.model_checkpoint_path)
+            print("Successfully loaded:", checkpoint.model_checkpoint_path)
+
         self.train_writer  = tf.summary.FileWriter(config.summary_file)
         # load shared weights if necessary
         if config.cnn_model_file:
@@ -95,8 +100,8 @@ class ImageCaptioner(object):
         b_conv2rnn = _bias_variable([vector_dim]) 
         fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
 
-        lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
-        state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
+        lstm_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size)
+        state = lstm_cell.zero_state(batch_size, dtype=tf.float32)	#[tf.zeros([batch_size, s]) for s in lstm.state_size]
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
@@ -116,7 +121,10 @@ class ImageCaptioner(object):
                 else:
                     curr_emb = tf.nn.embedding_lookup(self.idx2vec, max_prob_word)
 
-            output, state = lstm(curr_emb, state)
+            if self.config.num_lstm == 1:
+                output, state = lstm_cell(curr_emb, state)
+            else:
+                output, state = tf.nn.dynamic_rnn(cell=lstm_cell, inputs=curr_emb, dtype=tf.float32)
 
             logits = tf.matmul(output, W_word)+b_word
 
@@ -139,7 +147,6 @@ class ImageCaptioner(object):
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
 
-        print('After stacking')
         self.total_loss = total_loss / tf.reduce_sum(self.mask)
         tf.summary.scalar('total_loss',self.total_loss)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
@@ -148,7 +155,6 @@ class ImageCaptioner(object):
 
         
     def train(self, data):
-        self.training_flag = True
         print("Training network...")
         start_time = time.time()
         self.training_flag = True
@@ -164,10 +170,9 @@ class ImageCaptioner(object):
         display_loss = self.config.display_loss
         
         train_idx = np.arange(len(train_caps))
-        
-        print("Start training")
+
         batch_num = 0
-        for epoch in range(100):
+        for epoch in range(num_epochs):
             print("Epoch number: ", epoch)
             # shuffle training data
             shuffled_train_images = []
@@ -216,9 +221,13 @@ class ImageCaptioner(object):
                 if batch_num%display_loss == 0:
                     print("Current Training Loss = " + str(total_loss))
                     self.train_writer.add_summary(summary, batch_num)
+	
 				
                         
                 batch_num += 1
+
+            if epoch%self.config.ckpt_freq == 0:
+                self.saver.save(self.session, self.config.ckpt_dir+'Captioner', global_step=epoch)
 
         print("Finished Training")
         print("Elapsed time: ", self.elapsed(time.time() - start_time))
@@ -237,7 +246,7 @@ class ImageCaptioner(object):
         """ Test the model. """
         print("Testing model...")
         self.training_flag = False
-        result_file = self.config.results_file
+        results_file = self.config.results_file
         max_num_words = self.config.max_word_len
 
         test_images = data.training_data
@@ -250,9 +259,7 @@ class ImageCaptioner(object):
         # create empty matrices fed for testing
         empty_sentences = np.zeros((len(test_images), max_num_words))
         empty_mask = np.ones((len(test_images), max_num_words))
-        
-        
-        print('Testing!!')
+		
         if self.config.train_cnn:
             print('Not implemented yet!')
 
@@ -271,9 +278,19 @@ class ImageCaptioner(object):
             captions.append([])
             for y in range(len(captions_idx[0])):
                 captions[x].append(self.word_table.idx2word[captions_idx[x][y]])
-        
-        for idx in range(len(captions)):
-            print(captions[idx])
+					
+        output_text = ""
+        for cap_idx in range(len(captions)):
+            if "<END>" in captions[cap_idx]:
+                end_sentence = np.argmax(np.array(captions[cap_idx])=="<END>")
+            else:
+                end_sentence = max_num_words
+            sentence = ' '.join(captions[cap_idx][:end_sentence])
+            output_text += sentence + "\n"
+
+        f = open(results_file, "w")
+        f.write(output_text)
+        f.close()
 
 # Layers/initializers
 def _conv2d(x, W):
