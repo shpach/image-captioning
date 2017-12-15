@@ -21,7 +21,7 @@ def get_parameters():
     ### Saving checkpoints ###
     ##########################
     parser.add_argument('--ckpt_dir', help='Saves checkpoints here', default='./checkpoints/')
-    parser.add_argument('--ckpt_freq', help='Save model after this many iterations', default=1000, type=int)
+    parser.add_argument('--ckpt_freq', help='Save model after this many iterations', default=10, type=int)
 
     ######################
     ### Saving results ###
@@ -37,6 +37,7 @@ def get_parameters():
     parser.add_argument('--batch_size', help='Specify how many images to use for each iteration', default=20, type=int)
     parser.add_argument('--num_epochs', help='Specify how many epochs to run for', default=20, type=int)
     parser.add_argument('--display_loss', help='Specify how often to show training loss', default=5, type=int)
+    parser.add_argument('--train', help='Specify if model is being trained', default=True, type=bool)
 
     ########################
     ### CNN model params ###
@@ -94,7 +95,8 @@ def main(_):
     model = ImageCaptioner(config, word_table)
 
     # Train model
-    model.train(data)
+    if model.config.train:
+        model.train(data)
 
     # Test model
     model.test(data)
