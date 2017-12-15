@@ -83,9 +83,9 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
-        self.rnn_input = tf.placeholder(tf.float32, [batch_size, self.img_dim])
-        self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
+        self.rnn_input = tf.placeholder(tf.float32, [None, self.img_dim])
+        self.sentences = tf.placeholder(tf.int32, [None, max_num_words])
+        self.mask = tf.placeholder(tf.float32, [None, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
@@ -96,7 +96,7 @@ class ImageCaptioner(object):
         fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
 
         lstm = tf.contrib.rnn.BasicLSTMCell(hidden_size)      
-        state = [tf.zeros([batch_size, s]) for s in lstm.state_size]
+        state = [tf.zeros([tf.shape(self.rnn_input)[0], s]) for s in lstm.state_size]
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
@@ -139,7 +139,6 @@ class ImageCaptioner(object):
             
         self.gen_captions = tf.stack(gen_captions, axis=1)
 
-        print('After stacking')
         self.total_loss = total_loss / tf.reduce_sum(self.mask)
         tf.summary.scalar('total_loss',self.total_loss)
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)
@@ -251,8 +250,6 @@ class ImageCaptioner(object):
         empty_sentences = np.zeros((len(test_images), max_num_words))
         empty_mask = np.ones((len(test_images), max_num_words))
         
-        
-        print('Testing!!')
         if self.config.train_cnn:
             print('Not implemented yet!')
 
