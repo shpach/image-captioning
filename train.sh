@@ -9,12 +9,18 @@ TEST_CAPTIONS="${CURR_DIR}/data/test/test_captions"
 # CNN params
 CNN_MODEL_FILE="${CURR_DIR}/pretrained/vgg16_weights.npz"
 
+# Training parameters
+NUM_EPOCHS=1001
+BATCH_SIZE=101
 
 python main.py --train_img_dir "${TRAIN_IMG_DIR}"	\
 		--train_captions "${TRAIN_CAPTIONS}"	\
 		--test_img_dir "${TEST_IMG_DIR}"	\
 		--test_captions "${TEST_CAPTIONS}"	\
        	--cnn_model_file "${CNN_MODEL_FILE}" \
+              --num_epochs ${NUM_EPOCHS}  \
+              --batch_size ${BATCH_SIZE}  \
+              --train
        	# --train_cnn	\
        # [--ckpt_dir CKPT_DIR] 
        # [--ckpt_freq CKPT_FREQ]

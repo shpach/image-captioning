@@ -183,6 +183,9 @@ class ImageCaptioner(object):
                 shuffled_train_caps.append(train_caps[old_idx])
             
             for batch_idx in range(0,len(train_caps),batch_size):
+                # Throw away leftover images for simplicity
+                if batch_idx+batch_size >= len(shuffled_train_images):
+                    break
                 curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
                 
@@ -205,8 +208,7 @@ class ImageCaptioner(object):
                 #curr_mask = np.ones((batch_size, max_word_len))
             
                 if self.config.train_cnn:
-                    pass
-                    #print('Not implemented yet!')
+                    print('Not implemented yet!')
 
                 else: 
 
@@ -227,6 +229,7 @@ class ImageCaptioner(object):
                 batch_num += 1
 
             if epoch%self.config.ckpt_freq == 0:
+                print('Saving checkpoint...')
                 self.saver.save(self.session, self.config.ckpt_dir+'Captioner', global_step=epoch)
 
         print("Finished Training")
