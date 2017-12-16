@@ -64,8 +64,8 @@ def get_parameters():
     parser.add_argument('--glove_file_path', help='Directory containing the glove file', default='./data/glove/')
     parser.add_argument('--vector_dim', help='word2vec vector dimension', default=50, type=int)
     parser.add_argument('--data_file_path', help='directory for data', default='./data/Flickr/')
-    parser.add_argument('--image_width', help='resize image width', default=224)
-    parser.add_argument('--image_height', help='resize image height', default=224)
+    parser.add_argument('--image_width', help='resize image width', default=500)
+    parser.add_argument('--image_height', help='resize image height', default=500)
 
     args = parser.parse_args()
     return args
@@ -77,17 +77,17 @@ def main(_):
 
     # Prepare data
     word_table, data = dataset.prepare_data(config)
+
     # Preprocess all images
     pre.resize_images(data, (224,224))
-    data.training_data = data.training_data[:200,:,:,:]
-    data.training_annotation = data.training_annotation[:200]
+    data.training_data = data.training_data[:config.batch_size,:,:,:]
+    data.training_annotation = data.training_annotation[:config.batch_size]
     
     # Build model.
     model = ImageCaptioner(config, word_table)
 
     # Train model
     if model.config.train:
-        print('Training with [%d] epochs and [%d] samples/batch.' % (config.num_epochs, config.batch_size))
         model.train(data)
 
     # Test model
