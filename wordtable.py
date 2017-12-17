@@ -43,7 +43,7 @@ class WordTable():
                     vocab.append(w)
         
         self.word2idx["<EMPTY>"] = 0
-        self.idx2word[0] = "<EMTPY>"
+        self.idx2word[0] = "<EMPTY>"
         self.word2idx["<RARE>"] = 1
         self.idx2word[1] = "<RARE>"
         self.word2idx["<END>"] = 2
@@ -62,6 +62,8 @@ class WordTable():
             for line in f:
                 l = line.split()
                 self.word2vec[l[0]] = [float(x) for x in l[1:]]
+            self.word2vec["<RARE>"] = [0. for i in range(self.dim_embed)]
+            self.word2vec["<EMPTY>"] = [0. for i in range(self.dim_embed)]
 
 
     def save(self):

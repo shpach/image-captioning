@@ -171,7 +171,7 @@ class ImageCaptioner(object):
         
         train_idx = np.arange(len(train_caps))
 
-        for epoch in range(num_epochs):
+        for epoch in range(1,num_epochs+1):
             print("Epoch number: ", epoch)
             # shuffle training data
             shuffled_train_images = []
@@ -183,7 +183,7 @@ class ImageCaptioner(object):
             
             for batch_idx in range(0,len(train_caps),batch_size):
                 # Throw away leftover batches
-                if batch_idx + batch_size >= len(train_caps):
+                if batch_idx + batch_size > len(train_caps):
                     continue
                 curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
@@ -191,19 +191,16 @@ class ImageCaptioner(object):
                 curr_sentences = np.zeros((batch_size,max_word_len))
                 curr_mask = np.zeros((batch_size,max_word_len))
                 for cap_idx, cap in enumerate(curr_caps):
-                    for word_idx, word in enumerate(cap.lower().split(' ')[:-1]):
+                    for word_idx, word in enumerate(cap.lower().split(' ')):
                         if word_idx == max_word_len:
                             break
-                        if word in word2idx:
+                        if word in word2idx and word in self.word_table.word2vec:
                             curr_sentences[cap_idx][word_idx] = word2idx[word]
                         else:
                             curr_sentences[cap_idx][word_idx] = word2idx["<RARE>"]
                         curr_mask[cap_idx][word_idx] = 1
 
-                    if word_idx != max_word_len:
-                        curr_sentences[cap_idx][word_idx+1] = word2idx["<END>"]
-                        curr_mask[cap_idx][word_idx+1] = 1
-            
+
                 if self.config.train_cnn:
                     print('Not implemented yet!')
 
@@ -214,7 +211,7 @@ class ImageCaptioner(object):
                                                 self.sentences : curr_sentences,
                                                 self.mask : curr_mask,
                                                 })
-                
+
             if epoch%display_loss == 0:
                 print("Current Training Loss = " + str(total_loss))
                 self.train_writer.add_summary(summary, epoch)
