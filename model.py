@@ -171,7 +171,6 @@ class ImageCaptioner(object):
         
         train_idx = np.arange(len(train_caps))
 
-        batch_num = 0
         for epoch in range(num_epochs):
             print("Epoch number: ", epoch)
             # shuffle training data
@@ -185,7 +184,6 @@ class ImageCaptioner(object):
             for batch_idx in range(0,len(train_caps),batch_size):
                 # Throw away leftover batches
                 if batch_idx + batch_size >= len(train_caps):
-                    batch_num += 1
                     continue
                 curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
@@ -217,13 +215,10 @@ class ImageCaptioner(object):
                                                 self.mask : curr_mask,
                                                 })
                 
-                if batch_num%display_loss == 0:
-                    print("Current Training Loss = " + str(total_loss))
-                    self.train_writer.add_summary(summary, batch_num)
+            if epoch%display_loss == 0:
+                print("Current Training Loss = " + str(total_loss))
+                self.train_writer.add_summary(summary, epoch)
     
-                
-                        
-                batch_num += 1
 
             if epoch%self.config.ckpt_freq == 0:
                 print('Saving checkpoint...')
