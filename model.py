@@ -103,8 +103,7 @@ class ImageCaptioner(object):
         lstm_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size)
         state = lstm_cell.zero_state(tf.shape(self.rnn_input)[0], dtype=tf.float32)  #[tf.zeros([batch_size, s]) for s in lstm.state_size]
 
-        idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
-        self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
+        self.idx2vec = tf.convert_to_tensor(self.word_table.idx2vec_np, dtype=tf.float32)
 
         W_word = tf.Variable(tf.random_uniform([hidden_size, num_words]))
         b_word = tf.Variable(tf.zeros([num_words]))
@@ -273,11 +272,11 @@ class ImageCaptioner(object):
                     
         output_text = ""
         for cap_idx in range(len(captions)):
-            if "<END>" in captions[cap_idx]:
-                end_sentence = np.argmax(np.array(captions[cap_idx])=="<END>")
+            if "." in captions[cap_idx]:
+                end_sentence = np.argmax(np.array(captions[cap_idx])==".")
             else:
-                end_sentence = max_num_words
-            sentence = ' '.join(captions[cap_idx][:end_sentence])
+                end_sentence = max_num_words-1
+            sentence = ' '.join(captions[cap_idx][:end_sentence+1])
             output_text += sentence + "\n"
 
         f = open(results_file, "w")

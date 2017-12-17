@@ -46,13 +46,13 @@ class WordTable():
         self.idx2word[0] = "<EMPTY>"
         self.word2idx["<RARE>"] = 1
         self.idx2word[1] = "<RARE>"
-        self.word2idx["<END>"] = 2
-        self.idx2word[2] = "<END>"
-        
+
         for idx, word in enumerate(vocab):
-            self.word2idx[word] = idx+3
-            self.idx2word[idx+3] = word
+            self.word2idx[word] = idx+2
+            self.idx2word[idx+2] = word
         self.num_words = len(self.word2idx)
+			
+        self.idx2vec_np = np.array([self.word2vec[self.idx2word[i]] if (self.idx2word[i] in self.word2vec) else self.word2vec["<RARE>"] for i in range(self.num_words)])
 
     def load_gloves(self, dir):
         """ Using GloVe data for word embedding"""
