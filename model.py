@@ -88,9 +88,9 @@ class ImageCaptioner(object):
         vector_dim = self.config.vector_dim
 
         # Inputs to RNN
-        self.rnn_input = tf.placeholder(tf.float32, [batch_size, self.img_dim])
-        self.sentences = tf.placeholder(tf.int32, [batch_size, max_num_words])
-        self.mask = tf.placeholder(tf.float32, [batch_size, max_num_words])
+        self.rnn_input = tf.placeholder(tf.float32, [None, self.img_dim])
+        self.sentences = tf.placeholder(tf.int32, [None, max_num_words])
+        self.mask = tf.placeholder(tf.float32, [None, max_num_words])
 
         # Outputs of RNN
         gen_captions = []
@@ -101,7 +101,7 @@ class ImageCaptioner(object):
         fc_conv2rnn = tf.nn.xw_plus_b(self.rnn_input, W_conv2rnn, b_conv2rnn)
 
         lstm_cell = tf.contrib.rnn.BasicLSTMCell(hidden_size)
-        state = lstm_cell.zero_state(batch_size, dtype=tf.float32)  #[tf.zeros([batch_size, s]) for s in lstm.state_size]
+        state = lstm_cell.zero_state(tf.shape(self.rnn_input)[0], dtype=tf.float32)  #[tf.zeros([batch_size, s]) for s in lstm.state_size]
 
         idx2vec_np = np.array([self.word_table.word2vec[self.word_table.idx2word[i]] for i in range(num_words) if self.word_table.idx2word[i] in self.word_table.word2vec])
         self.idx2vec = tf.convert_to_tensor(idx2vec_np, dtype=tf.float32)
@@ -171,7 +171,6 @@ class ImageCaptioner(object):
         
         train_idx = np.arange(len(train_caps))
 
-        batch_num = 0
         for epoch in range(num_epochs):
             print("Epoch number: ", epoch)
             # shuffle training data
@@ -183,6 +182,9 @@ class ImageCaptioner(object):
                 shuffled_train_caps.append(train_caps[old_idx])
             
             for batch_idx in range(0,len(train_caps),batch_size):
+                # Throw away leftover batches
+                if batch_idx + batch_size >= len(train_caps):
+                    continue
                 curr_images = shuffled_train_images[batch_idx:batch_idx+batch_size]
                 curr_caps = shuffled_train_caps[batch_idx:batch_idx+batch_size]
                 
@@ -213,13 +215,10 @@ class ImageCaptioner(object):
                                                 self.mask : curr_mask,
                                                 })
                 
-                if batch_num%display_loss == 0:
-                    print("Current Training Loss = " + str(total_loss))
-                    self.train_writer.add_summary(summary, batch_num)
+            if epoch%display_loss == 0:
+                print("Current Training Loss = " + str(total_loss))
+                self.train_writer.add_summary(summary, epoch)
     
-                
-                        
-                batch_num += 1
 
             if epoch%self.config.ckpt_freq == 0:
                 print('Saving checkpoint...')
